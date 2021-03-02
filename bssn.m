@@ -121,32 +121,26 @@ function linadv
     legend('LF', 'Goda')
 end
 
-function y=one_soliton_IC(x)
-    y=-8./((cosh(2*x)).^2);
+% This function returns f'(x) where f is one of the state variables
+function y=f_prime(f,h,a,b,c,d)
+    y=zeros(N);
+    % These are for the two-level boundary conditions at each end
+    y(1) = a;
+    y(2) = b;
+    y(N-1) = c;
+    y(N) = d;
+    % Computing the middle parts
+    y(3:N-2) = (-f(5:N) + 8*f(4:N-1) - 8*f(2:N-3) + f(1:N-4))./(12*h);
 end
 
-function y=two_soliton_IC(x)
-    y=-8./((cosh(2*x+8)).^2)-2./((cosh(x)).^2);
-end
-
-function y=Gauss_IC(x)
-    y=-5*exp(-((x/2).^2));
-end
-
-% the matrices for the implicit method
-%-------------------------
-% implicit Goda scheme
-function [A,B]=mat_linadv_Goda(N,h,dt,v_old)
-  e = ones(N,1); 
-  A = spdiags([-0.5*dt/h^3*e dt/h^3*e+dt/h*([v_old(2:N); v_old(1)]+v_old)...
-               e -dt/h^3*e-dt/h*([v_old(N); v_old(1:N-1)]+v_old) ...
-               0.5*dt/h^3*e], [-2:2], N, N);
-  B=speye(N);
-  % Necessary boundary conditions for first and last couple rows
-  A(1,N) = dt/h^3+dt/h*(v_old(1)+v_old(N));
-  A(1,N-1) = -0.5*dt/h^3;
-  A(2,N) = -0.5*dt/h^3;
-  A(N-1,1) = 0.5*dt/h^3;
-  A(N,1) = -dt/h^3-dt/h*(v_old(N)+v_old(1));
-  A(N,2) = 0.5*dt/h^3;
+% This function returns f''(x) where f is one of the state variables
+function y=f_pprime(f,h,a,b,c,d)
+    y=zeros(N);
+    % These are for the two-level boundary conditions at each end
+    y(1) = a;
+    y(2) = b;
+    y(N-1) = c;
+    y(N) = d;
+    % Computing the middle parts
+    y(3:N-2) = (-f(5:N) + 16*f(4:N-1) - 30*f(3:N-2) + 16*f(2:N-3) - f(1:N-4))./(12*h^2);
 end
