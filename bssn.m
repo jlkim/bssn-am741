@@ -95,15 +95,16 @@ function bssn
         g_rr_pp = f_pprime(g_rr,h,1,1,1,1,N);
         g_thth_p = f_prime(g_thth,h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
         g_thth_pp = f_pprime(g_thth,h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
-        A_rr_p =  f_pprime(A_rr,h,0,0,0,0,N);
+        A_rr_p =  f_prime(A_rr,h,0,0,0,0,N);
         K_p = f_prime(K,h,0,0,0,0,N);
         Gamma_r_p = f_prime(Gamma_r,h,1/(r_min-3*h/2),1/(r_min-h/2),1/(r_max-h/2),1/(r_max+3*h/2),N);
         % BCs. for constraints depends on the Cauchy surface; pick finite energy density at inner BH boundary?
-        H_p = f_prime(H,h,1,1,0,0,N);
+        % H_p = f_prime(H,h,1,1,0,0,N); % Hank's ICs
+        H_p = f_prime(H,h,0,0,0,0,N); % Leo's ICs
         M_p = f_prime(M,h,0,0,0,0,N);
-        M_pp = f_prime(M_p,h,0,0,0,0,N);
+        M_pp = f_pprime(M,h,0,0,0,0,N);
         G_p = f_prime(G,h,0,0,0,0,N);
-        G_pp = f_prime(G_p,h,0,0,0,0,N);
+        G_pp = f_pprime(G,h,0,0,0,0,N);
         
         % Building constraints
         H = -3/2*A_rr.*A_rr./g_rr./g_rr + 2/3.*K.*K - 5/2.*chi_p.*chi_p./chi./g_rr...
@@ -129,8 +130,8 @@ function bssn
                    -2/3*v.*beta.*g_thth_p+beta.*g_thth_p...
                    -2/3*g_thth.*v.*beta_p
         A_rr_t = -2*alpha.*A_rr.^2./g_rr+K.*alpha.*A_rr-v.*beta.*g_rr_p.*A_rr./(3*g_rr)...
-                 -2*v.*beta.*g_thth_p.*A_rr./(3*g_thth)-3/2*v.*beta_p.*A_rr...
-                 +2*alpha.*chi.*g_rr_p.^2./(3*g_rr.^2)... % end of first line
+                 -2*v.*beta.*g_thth_p.*A_rr./(3*g_thth)-2/3*v.*beta_p.*A_rr...
+                 +2*beta_p.*A_rr+2*alpha.*chi.*g_rr_p.^2./(3*g_rr.^2)... % end of first line
                  -alpha.*chi.*g_thth_p.^2./(3*g_thth.^2)-alpha.*chi_p.^2./(6*chi)...
                  -2*g_rr.*alpha.*chi./(3*g_thth)+beta.*A_rr_p+2/3*g_rr.*alpha.*chi.*Gamma_r_p...
                  -alpha.*chi.*g_rr_p.*g_thth_p./(2*g_rr.*g_thth)+chi.*g_rr_p.*alpha_p./(3*g_rr)... % end of second line
