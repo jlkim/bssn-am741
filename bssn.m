@@ -5,21 +5,20 @@ function bssn
     % This will return a matrix A of time derivatives of state variables
     % and a matrix B of time derivatives of constraints
     %defining L(containing RMS of A_rr_t) and H(the values of h)
-    L=zeros(1,10)
-    H=zeros(1,10)
-    for j=1:6
-        h=0.1^j
-        [A,B] = compute_bssn(1,2,h);
-        Aj=A(:,7);
-        L(1,j)=sqrt(mean((Aj).^2));
+    L=zeros(1,10);
+    H=zeros(1,10);
+    for j=1:20
+        h=0.5^j;
+        [U,C] = compute_bssn(1,10,h);
+        Uj=U(:,7);
+        L(1,j)=sqrt(mean((Uj).^2));
         H(1,j)=h;
         
     end
-    L
-    H
-    %plotting;
+    % plot loglog plot
     loglog(H,L)
-
+    % plot slope of loglog plot
+    %plot(log10(H(1,1:19)),(log10(L(1,2:20)) - log10(L(1,1:19)))./( log10(H(1,2:20)) - log10(H(1,1:19)) ) )
 
 
 end
@@ -27,13 +26,13 @@ end
  
 
 % temporary name, could change it later 
-function [A,B]=compute_bssn(r_min, r_max, h)
+function [U,C]=compute_bssn(r_min, r_max, h)
     % A is the (N,9) matrix with the time derivatives of state variables
     % B is the (N,3) matrix with the time derivatives of constraints
     
     % first initialize some parameters  
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    N=ceil((r_max-r_min)/h);
+    N=round((r_max-r_min)/h);
     % time at which we want to end the simulation
     t_end=1;
     % number of timesteps to be taken
@@ -46,7 +45,7 @@ function [A,B]=compute_bssn(r_min, r_max, h)
     % Eulerian condition (v=0) or Lagrangian condition (v=1)
     v=0;
     % eta parameter in the Gamma-driver condition
-    eta = 0.;
+    eta = 0;
     
     % initialize some arrays
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -62,8 +61,8 @@ function [A,B]=compute_bssn(r_min, r_max, h)
     c_new = zeros(N,n_constraints);
     c_old = zeros(N,n_constraints);
     
-    A = zeros(N,n_variables);
-    B = zeros(N,n_constraints);
+    U = zeros(N,n_variables);
+    C = zeros(N,n_constraints);
 
     
     % the initial conditions
@@ -118,6 +117,7 @@ function [A,B]=compute_bssn(r_min, r_max, h)
         g_rr_p = f_prime(g_rr,h,1,1,1,1,N);
         g_rr_pp = f_pprime(g_rr,h,1,1,1,1,N);
         g_thth_p = f_prime(g_thth,h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
+        %g_thth_p = f_prime(g_thth,h,(r_min-2*h)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
         g_thth_pp = f_pprime(g_thth,h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
         A_rr_p =  f_prime(A_rr,h,0,0,0,0,N);
         K_p = f_prime(K,h,0,0,0,0,N);
@@ -161,7 +161,7 @@ function [A,B]=compute_bssn(r_min, r_max, h)
                  -alpha.*chi.*g_rr_pp./(3*g_rr)+alpha.*chi.*g_thth_pp./(3*g_thth)...
                  -2/3*chi.*alpha_pp+alpha.*chi_pp/3;
         K_t = 3*alpha.*A_rr.^2./(2*g_rr.^2)+K.^2.*alpha./3+beta_r.*K_p...
-              +chi.*g_rr_p.*alpha_p./(2*g_rr.^2)-chi.*g_thth_p.*alpha_p./g_rr./g_thth...
+              +chi.*g_rr_p.*alpha_p./(2*g_rr.^2)-chi.*g_thth_p.*alpha_p./(g_rr.*g_thth)...
               +alpha_p.*chi_p./(2*g_rr)-chi.*alpha_pp./g_rr;
         Gamma_r_t = -v.*beta_r.*g_thth_p.^2./(g_rr.*g_thth.^2)...
                     +A_rr.*alpha.*g_thth_p./(g_rr.^2.*g_thth)...
@@ -190,20 +190,18 @@ function [A,B]=compute_bssn(r_min, r_max, h)
     end
     % function outputs, A(N,9) is the time derivatives
     % B(N,3) are the constraint time derivatives
-    A(:,1) = alpha_t;
-    A(:,2) = beta_r_t;
-    A(:,3) = B_t;
-    A(:,4) = chi_t;
-    A(:,5) = g_rr_t;
-    A(:,6) = g_thth_t;
-    A(:,7) = A_rr_t;
-    A(:,8) = K_t;
-    A(:,9) = Gamma_r_t;
-    B(:,1) = H_t;
-    B(:,2) = M_t;
-    B(:,3) = G_t;
-    
-    
+    U(:,1) = alpha_t;
+    U(:,2) = beta_r_t;
+    U(:,3) = B_t;
+    U(:,4) = chi_t;
+    U(:,5) = g_rr_t;
+    U(:,6) = g_thth_t;
+    U(:,7) = A_rr_t;
+    U(:,8) = K_t;
+    U(:,9) = Gamma_r_t;
+    C(:,1) = H_t;
+    C(:,2) = M_t;
+    C(:,3) = G_t;
     
    
 end
@@ -218,8 +216,8 @@ end
 function y=f_prime(f,h,a,b,c,d,N)
     y=zeros(N,1);
     % These are for the two-level boundary conditions at each end
-    y(1) = (-f(3) + 8*f(2) - 8*a + b)./(12*h);
-    y(2) = (-f(4) + 8*f(3) - 8*f(1) + a)./(12*h);
+    y(1) = (-f(3) + 8*f(2) - 8*b + a)./(12*h);
+    y(2) = (-f(4) + 8*f(3) - 8*f(1) + b)./(12*h);
     y(N-1) = (-c + 8*f(N) - 8*f(N-2) + f(N-3))./(12*h);
     y(N) = (-d + 8*c - 8*f(N-1) + f(N-2))./(12*h);
     % Computing the middle parts
