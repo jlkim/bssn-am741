@@ -4,12 +4,12 @@ function bssn
     %[A,B] = compute_bssn(1, 2, 0.000001)
     % This will return a matrix A of time derivatives of state variables
     % and a matrix B of time derivatives of constraints
-    
+    %defining L(containing RMS of A_rr_t) and H(the values of h)
     L=zeros(1,10)
     H=zeros(1,10)
     for j=1:5
         h=0.1^j
-       [A,B] = compute_bssn(1,2,h);
+        [A,B] = compute_bssn(1,2,h);
         Aj=A(:,7)
         L(1,j)=sqrt(mean((Aj).^2));
         H(1,j)=h
@@ -17,9 +17,9 @@ function bssn
     end
     L
     H
-loglog(H,L)
-% y=logspace(-1,-6,10);
-% [Aj,Bj] = compute_bssn(1, 2,y(1,));
+    %plotting
+    loglog(H,L)
+
 
 
 end
