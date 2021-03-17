@@ -1,10 +1,30 @@
 function bssn
     % call the other function here
     % example:
-    [A,B] = compute_bssn(1, 2, 0.1)
+    %[A,B] = compute_bssn(1, 2, 0.000001)
     % This will return a matrix A of time derivatives of state variables
     % and a matrix B of time derivatives of constraints
+    
+    L=zeros(1,10)
+    H=zeros(1,10)
+    for j=1:5
+        h=0.1^j
+       [A,B] = compute_bssn(1,2,h);
+        Aj=A(:,7)
+        L(1,j)=sqrt(mean((Aj).^2));
+        H(1,j)=h
+        
+    end
+    L
+    H
+loglog(H,L)
+% y=logspace(-1,-6,10);
+% [Aj,Bj] = compute_bssn(1, 2,y(1,));
+
+
 end
+
+ 
 
 % temporary name, could change it later 
 function [A,B]=compute_bssn(r_min, r_max, h)
@@ -13,7 +33,7 @@ function [A,B]=compute_bssn(r_min, r_max, h)
     
     % first initialize some parameters  
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    N=(r_max-r_min)/h;
+    N=ceil((r_max-r_min)/h);
     % time at which we want to end the simulation
     t_end=1;
     % number of timesteps to be taken
@@ -182,6 +202,10 @@ function [A,B]=compute_bssn(r_min, r_max, h)
     B(:,1) = H_t;
     B(:,2) = M_t;
     B(:,3) = G_t;
+    
+    
+    
+   
 end
 
 function y=time_derivative(v, h, N)
