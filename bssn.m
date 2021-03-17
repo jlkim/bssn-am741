@@ -7,17 +7,17 @@ function bssn
     %defining L(containing RMS of A_rr_t) and H(the values of h)
     L=zeros(1,10)
     H=zeros(1,10)
-    for j=1:5
+    for j=1:6
         h=0.1^j
         [A,B] = compute_bssn(1,2,h);
-        Aj=A(:,7)
+        Aj=A(:,7);
         L(1,j)=sqrt(mean((Aj).^2));
-        H(1,j)=h
+        H(1,j)=h;
         
     end
     L
     H
-    %plotting
+    %plotting;
     loglog(H,L)
 
 
@@ -218,8 +218,8 @@ end
 function y=f_prime(f,h,a,b,c,d,N)
     y=zeros(N,1);
     % These are for the two-level boundary conditions at each end
-    y(1) = (-f(3) + 8*f(2) - 8*b + a)./(12*h);
-    y(2) = (-f(4) + 8*f(3) - 8*f(1) + b)./(12*h);
+    y(1) = (-f(3) + 8*f(2) - 8*a + b)./(12*h);
+    y(2) = (-f(4) + 8*f(3) - 8*f(1) + a)./(12*h);
     y(N-1) = (-c + 8*f(N) - 8*f(N-2) + f(N-3))./(12*h);
     y(N) = (-d + 8*c - 8*f(N-1) + f(N-2))./(12*h);
     % Computing the middle parts
