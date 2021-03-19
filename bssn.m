@@ -405,8 +405,8 @@ end
 function chi0=cap(r0,r,M,N)
     f=zeros(N,1);
     a=(2-r0)./2./r0;
-    f= r0.*r + ((1+M/2./r)-r0.*r).*heaviside(r-a);
-    chi0 = power(f,-4);
+    f= r0.*r + (1./(1+M/2./r)-r0.*r).*heaviside(r-a);
+    chi0 = power(f,4);
 end
 
 % Kreiss-Oliger dissipation term
