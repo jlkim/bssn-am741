@@ -46,6 +46,8 @@ function [U,C]=compute_bssn(r_min, r_max, h)
     v=0;
     % eta parameter in the Gamma-driver condition
     eta = 0;
+    % mass parameter for the Schwarzchild BH
+    M = 1.;
     
     % initialize some arrays
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -67,6 +69,7 @@ function [U,C]=compute_bssn(r_min, r_max, h)
     
     % the initial conditions
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % flat space ICs
     alpha = ones(N,1);
     beta_r = zeros(N,1);
     B = zeros(N,1);
@@ -76,6 +79,12 @@ function [U,C]=compute_bssn(r_min, r_max, h)
     A_rr = zeros(N,1);
     K = zeros(N,1);
     Gamma_r = -2./r;
+    % punctured Schwarzchild BH ICs
+    g_rr = ones(N,1);
+    g_thth = r.*r;
+    % r0 MUST be between 1 and 2!
+    chi = chi0(1.8,r,M);
+    
     % initializing the initial state with ICs
     v_old(:,1) = alpha;
     v_old(:,2) = beta_r;
@@ -184,15 +193,6 @@ function [U,C]=compute_bssn(r_min, r_max, h)
                 +(2/3.*alpha_p.*chi - alpha.*chi_p./3 + alpha.*chi.*g_thth_p./g_thth).*G_p;
         G_t = beta_r.*G_p+ 2.*alpha./g_rr.*M_r;
         
-        %
-       charac1= Gamma_r - 3/2.*A_rr./((g_rr.^3).*chi).^0.5 +1/2.*chi_p./(2.*g_rr.*chi)- 1/2.*g_rr_p./(2.*g_rr.^2)...
-            +g_thth_p./(2.*g_rr.*g_thth)+ K./(g_rr.*chi).^0.5
-        
-        charac2=Gamma_r + 3/2.*A_rr./((g_rr.^3).*chi).^0.5 +1/2.*chi_p./(2.*g_rr.*chi)- 1/2.*g_rr_p./(2.*g_rr.^2)...
-            +g_thth_p./(2.*g_rr.*g_thth)- K./(g_rr.*chi).^0.5
-        
-        
-        
         % this part is for time evolution, not implemented yet
         v_old=v_new;
         c_old=c_new;
@@ -243,4 +243,12 @@ function y=f_pprime(f,h,a,b,c,d,N)
     y(N) = (-d + 16*c - 30*f(N) + 16*f(N-1) - f(N-2))./(12*h^2);
     % Computing the middle parts
     y(3:N-2) = (-f(5:N) + 16*f(4:N-1) - 30*f(3:N-2) + 16*f(2:N-3) - f(1:N-4))./(12*h^2);
+end
+
+% capping function for chi at t=0
+function chi0=cap(r0,r,M)
+    f=zeros(N,1);
+    a=(2-r0)./2./r0;
+    f= r0.*r.+ ((1+M/2./r)-r0.*r.).*heaviside(r-a);
+    chi0 = pow(f,-4.);
 end
