@@ -66,10 +66,10 @@ function bssn
     K = zeros(N,1);
     Gamma_r = -2./r;
     % punctured Schwarzchild BH ICs
-    %g_rr = ones(N,1);
-    %g_thth = r.*r;
+    g_rr = ones(N,1);
+    g_thth = r.*r;
     % tune r0 near 2 but not above.
-    %chi = cap(1.8,r,1,N);
+    chi = cap(1.8,r,1,N);
     
     % initializing the initial state with ICs
     v_old(:,1) = alpha;
@@ -83,11 +83,11 @@ function bssn
     v_old(:,9) = Gamma_r;
     
     % time to solve the equations
-    tspan = [0 2];
+    tspan = [0 1];
     % setting IC
     y0 = v_old;
     % solving step
-    [t,y] = ode45(@(t,y) dydt(t,y,h,N,r_min,r_max),tspan,y0);
+    [t,y] = ode45(@(t,y) dydt(t,y,h,N),tspan,y0);
     % getting the output size
     [t_size,y_size] = size(y);
     % unpackaging
@@ -299,7 +299,7 @@ function [U,C]=compute_bssn(r_min, r_max, h)
    
 end
 
-function U=dydt(t, v_old, h, N, r_min, r_max)
+function U=dydt(t, v_old, h, N)
     eta = 1;
     v = 0;
     U = zeros(9*N,1);
@@ -307,21 +307,36 @@ function U=dydt(t, v_old, h, N, r_min, r_max)
     [alpha, beta_r, B, chi, g_rr, g_thth, A_rr, K, Gamma_r] = unpackage(v_old, N);
 
     % radial derivatives
-    alpha_p = f_prime(alpha,h,1,1,1,1,N);
-    alpha_pp = f_pprime(alpha,h,1,1,1,1,N);
-    beta_r_p = f_prime(beta_r,h,0,0,0,0,N);
-    beta_r_pp = f_pprime(beta_r,h,0,0,0,0,N);
-    B_p= f_prime(B,h,0,0,0,0,N);
-    chi_p = f_prime(chi,h,1,1,1,1,N);
-    chi_pp = f_pprime(chi,h,1,1,1,1,N);
-    g_rr_p = f_prime(g_rr,h,1,1,1,1,N);
-    g_rr_pp = f_pprime(g_rr,h,1,1,1,1,N);
-    g_thth_p = f_prime(g_thth,h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
-    g_thth_pp = f_pprime(g_thth,h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
-    A_rr_p =  f_prime(A_rr,h,0,0,0,0,N);
-    K_p = f_prime(K,h,0,0,0,0,N);
-    Gamma_r_p = f_prime(Gamma_r,h,-2/(r_min-3*h/2),-2/(r_min-h/2),-2/(r_max+h/2),-2/(r_max+3*h/2),N);
-
+    alpha_p = f_prime(alpha,h,alpha(2),alpha(1),alpha(N),alpha(N-1),N);
+    alpha_pp = f_pprime(alpha,h,alpha(2),alpha(1),alpha(N),alpha(N-1),N);
+    beta_r_p = f_prime(beta_r,h,-beta_r(2),-beta_r(1),-beta_r(N),-beta_r(N-1),N);
+    beta_r_pp = f_pprime(beta_r,h,-beta_r(2),-beta_r(1),-beta_r(N),-beta_r(N-1),N);
+    B_p= f_prime(B,h,-B(2),-B(1),-B(N),-B(N-1),N);
+    chi_p = f_prime(chi,h,chi(2),chi(1),chi(N),chi(N-1),N);
+    chi_pp = f_pprime(chi,h,chi(2),chi(1),chi(N),chi(N-1),N);
+    g_rr_p = f_prime(g_rr,h,g_rr(2),g_rr(1),g_rr(N),g_rr(N-1),N);
+    g_rr_pp = f_pprime(g_rr,h,g_rr(2),g_rr(1),g_rr(N),g_rr(N-1),N);
+    g_thth_p = f_prime(g_thth,h,g_thth(2), g_thth(1), g_thth(N), g_thth(N-1),N);
+    g_thth_pp = f_pprime(g_thth,h,g_thth(2), g_thth(1), g_thth(N), g_thth(N-1),N);
+    A_rr_p =  f_prime(A_rr,h,A_rr(2),A_rr(1),A_rr(N),A_rr(N-1),N);
+    K_p = f_prime(K,h,K(2),K(1),K(N),K(N-1),N);
+    Gamma_r_p = f_prime(Gamma_r,h,-Gamma_r(2),-Gamma_r(1),-Gamma_r(N), -Gamma_r(N-1) ,N);
+    
+    % Building constraints
+    H = -3/2*A_rr.*A_rr./g_rr./g_rr + 2/3.*K.*K - 5/2.*chi_p.*chi_p./chi./g_rr...
+            +2.*chi_pp./g_rr + 2.*chi./g_thth-2.*chi.*g_thth_pp./g_rr./g_thth...
+            +2.*chi_p.*g_thth_p./g_rr./g_thth+chi.*g_rr_p.*g_thth_p./g_rr./g_rr./g_thth...
+            -chi_p.*g_rr_p./g_rr./g_rr+chi.*g_thth_p.*g_thth_p./2./g_rr./g_thth./g_thth;
+    M_r = A_rr_p./g_rr - 2/3.*K_p...
+        - 3/2.*A_rr./g_rr.*(chi_p./chi - g_thth_p./g_thth+ g_rr_p./g_rr);
+    G = -g_rr_p./2./g_rr./g_rr+Gamma_r+g_thth_p./g_thth./g_rr;
+    
+    H_p = f_prime(H,h,0,0,0,0,N);
+    M_r_p = f_prime(M_r,h,0,0,0,0,N);
+    M_r_pp = f_pprime(M_r,h,0,0,0,0,N);
+    G_p = f_prime(G,h,0,0,0,0,N);
+    G_pp = f_pprime(G,h,0,0,0,0,N);
+    
     % time derivatives for each state variable
     alpha_t = beta_r.*alpha_p-2*alpha.*K; % eqn 1
     beta_r_t = 3/4*B+beta_r.*beta_r_p; % note this is only 2a), what is B?
