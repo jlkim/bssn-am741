@@ -82,8 +82,8 @@ function [U,C]=compute_bssn(r_min, r_max, h)
     % punctured Schwarzchild BH ICs
     g_rr = ones(N,1);
     g_thth = r.*r;
-    % r0 MUST be between 1 and 2!
-    chi = chi0(1.8,r,M);
+    % tune r0 near 2 but not above.
+    chi = cap(1.8,r,M);
     
     % initializing the initial state with ICs
     v_old(:,1) = alpha;
