@@ -184,6 +184,15 @@ function [U,C]=compute_bssn(r_min, r_max, h)
                 +(2/3.*alpha_p.*chi - alpha.*chi_p./3 + alpha.*chi.*g_thth_p./g_thth).*G_p;
         G_t = beta_r.*G_p+ 2.*alpha./g_rr.*M_r;
         
+        %
+       charac1= Gamma_r - 3/2.*A_rr./((g_rr.^3).*chi).^0.5 +1/2.*chi_p./(2.*g_rr.*chi)- 1/2.*g_rr_p./(2.*g_rr.^2)...
+            +g_thth_p./(2.*g_rr.*g_thth)+ K./(g_rr.*chi).^0.5
+        
+        charac2=Gamma_r + 3/2.*A_rr./((g_rr.^3).*chi).^0.5 +1/2.*chi_p./(2.*g_rr.*chi)- 1/2.*g_rr_p./(2.*g_rr.^2)...
+            +g_thth_p./(2.*g_rr.*g_thth)- K./(g_rr.*chi).^0.5
+        
+        
+        
         % this part is for time evolution, not implemented yet
         v_old=v_new;
         c_old=c_new;
