@@ -159,12 +159,20 @@ function v_old=initial_cond(h,r_min,r_max,puncture)
     g_thth = (r.^2).';
     A_rr = zeros(N,1);
     K = zeros(N,1);
-    Gamma_r = (-2./r).';    
+    Gamma_r = (-2./r).';  
+    % parameter s determines whether we use cap for chi or inv_r
+    s = 0;
     
     if puncture == 1
     	% punctured Schwarzchild BH ICs
-        % tune r0 near 2 but not above.
-        chi = cap(1.8,r,M,N);
+	if s==1
+	        % tune r0 near 2 but not equal or above
+        	chi = cap(1.8,r,M,N);
+	else
+		% tune r0 near 0 but not equal or below
+		chi = pow(1.+M/2.*inv_r(r,.25),-4.);
+	end
+
     end
     
     % radial derivatives
@@ -273,6 +281,12 @@ function chi0=cap(r0,r,M,N)
     a=(2-r0)./2./r0;
     f= r0.*r + (1./(1+M/2./r)-r0.*r).*heaviside(r-a);
     chi0 = power(f,4).';
+end
+
+% capped 1/r
+function [R]=inv_r(r,r_0)
+	a=(1./r0).*ones(N,1);
+	R = a+(1./r-a).*heaviside(x-a);
 end
 
 % Kreiss-Oliger dissipation term
