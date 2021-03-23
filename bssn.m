@@ -9,16 +9,16 @@ function bssn
     n_var = 12; % number of functions to evolve
     r_min = 0;
     r_max = 10;
-    h = 0.1; % spatial grid
+    h = 1/100; % spatial grid
     N=round((r_max-r_min)/h);
     r=(r_min+h/2:h:r_max-h/2);
     % time at which we want to end the simulation
-    t_end=1;
+    t_end=50;
 
     % time to solve the equations
     tspan = [0 t_end];
     % initial condition
-    y0 = initial_cond(h,r_min,r_max,0)
+    y0 = initial_cond(h,r_min,r_max,1)
     % if we want to plot the RHS we call the function below where the
     % inputs are plot_RHS(num_iterations, r_min, r_max, puncture (0 or 1))
     %plot_RHS(20,1,10,0)
@@ -45,7 +45,7 @@ function bssn
     G=U(:,:,12);
     %plotting results
     for iter = 1:t_size
-       plot(r, alpha(iter,:))
+       plot(r, chi(iter,:))
        pause(0.005)
     end
 end
@@ -55,13 +55,13 @@ function U=dydt(t, v_old, h, N)
     global r_min
     global r_max
     eta = 0;
-    v = 0;
+    v = 1;
     U = zeros(n_var*N,1);
     % unpacking our previous state
     v_old=reshape(v_old,[],n_var);
     r=(r_min+h/2:h:r_max-h/2);
     [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, H, M_r, G] = unpackage(v_old);
-    
+    %Gamma_r = Gamma_r + 2/(r.');
     
     
     % radial derivatives
@@ -70,15 +70,15 @@ function U=dydt(t, v_old, h, N)
     beta_r_p = f_prime(beta_r,h,-beta_r(2),-beta_r(1),0,0,N);
     beta_r_pp = f_pprime(beta_r,h,-beta_r(2),-beta_r(1),0,0,N);
     B_r_p= f_prime(B_r,h,-B_r(2),-B_r(1),0,0,N);
-    chi_p = f_prime(chi,h,chi(2),chi(1),1,1,N);
-    chi_pp = f_pprime(chi,h,chi(2),chi(1),1,1,N);
+    chi_p = f_prime(chi,h,chi(2),chi(1),power(1 + 1/2/(r_max+h/2), -4),power(1 + 1/2/(r_max+3*h/2), -4),N);
+    chi_pp = f_pprime(chi,h,chi(2),chi(1),power(1 + 1/2/(r_max+h/2), -4),power(1 + 1/2/(r_max+3*h/2),-4),N);
     g_rr_p = f_prime(g_rr,h,g_rr(2),g_rr(1),1,1,N);
     g_rr_pp = f_pprime(g_rr,h,g_rr(2),g_rr(1),1,1,N);
     g_thth_p = f_prime(g_thth,h,g_thth(2), g_thth(1), (r_max+h/2)^2,(r_max+3*h/2)^2,N);
     g_thth_pp = f_pprime(g_thth,h,g_thth(2), g_thth(1),(r_max+h/2)^2,(r_max+3*h/2)^2,N);
     A_rr_p =  f_prime(A_rr,h,A_rr(2),A_rr(1),0,0,N);
     K_p = f_prime(K,h,K(2),K(1),0,0,N);
-    Gamma_r_p = f_prime(Gamma_r,h,-2/(r_min-3*h/2),-2/(r_min-h/2),-2/(r_max+h/2),-2/(r_max+3*h/2),N);
+    Gamma_r_p = f_prime(Gamma_r,h,-Gamma_r(2),-Gamma_r(1),-2/(r_max+h/2),-2/(r_max+3*h/2),N);
     % The initial conditions below are what we used before for r_min = 1.
     % at r_min = 0 some stuff go wrong
     %g_thth_p = f_prime(g_thth,h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
@@ -165,13 +165,14 @@ function v_old=initial_cond(h,r_min,r_max,puncture)
     
     if puncture == 1
     	% punctured Schwarzchild BH ICs
-	if s==1
-	        % tune r0 near 2 but not equal or above
-        	chi = cap(1.8,r,M,N);
-	else
-		% tune r0 near 0 but not equal or below
-		chi = pow(1.+M/2.*inv_r(r,.25),-4.);
-	end
+ 	if s==1
+ 	        % tune r0 near 2 but not equal or above
+         	chi = cap(1.8,r.',M,N);
+ 	else
+ 		% tune r0 near 0 but not equal or below
+        chi = power(1 + M/2./(r.'), -4);
+ 		%chi = power(1.+M/2.*inv_r(r.',.25,N),-4.);
+ 	end
 
     end
     
@@ -189,7 +190,7 @@ function v_old=initial_cond(h,r_min,r_max,puncture)
     g_thth_pp = f_pprime(g_thth,h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
     A_rr_p =  f_prime(A_rr,h,0,0,0,0,N);
     K_p = f_prime(K,h,0,0,0,0,N);
-    Gamma_r_p = f_prime(Gamma_r,h,2/(r_min-3*h/2),2/(r_min-h/2),-2/(r_max+h/2),-2/(r_max+3*h/2),N);
+    Gamma_r_p = f_prime(Gamma_r,h, -Gamma_r(2), -Gamma_r(1),-2/(r_max+h/2),-2/(r_max+3*h/2),N);
     
     % Building constraints
     H = -3/2*A_rr.*A_rr./g_rr./g_rr + 2/3.*K.*K - 5/2.*chi_p.*chi_p./chi./g_rr...
@@ -284,9 +285,9 @@ function chi0=cap(r0,r,M,N)
 end
 
 % capped 1/r
-function [R]=inv_r(r,r_0)
-	a=(1./r0).*ones(N,1);
-	R = a+(1./r-a).*heaviside(x-a);
+function [R]=inv_r(r,r_0,N)
+	a=(1./r_0).*ones(N,1);
+	R = a+(1./r-a).*heaviside(r-a);
 end
 
 % Kreiss-Oliger dissipation term
