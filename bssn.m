@@ -4,58 +4,65 @@ function bssn
     global n_var
     global r_min
     global r_max
-    v = 0; % Eulerian condition (v=0) or Lagrangian condition (v=1)
-    eta = 0; % eta parameter in the Gamma-driver condition
+    global diss_on
+    global eta
+    global puncture
+    v = 1; % Eulerian condition (v=0) or Lagrangian condition (v=1)
+    eta = 0.5; % eta parameter in the Gamma-driver condition
     n_var = 12; % number of functions to evolve
-    r_min = 0;
+    r_min = 1;
     r_max = 10;
+    diss_on = 1; % dissipation (Kreiss-Oliger) on (=1) or off (=0)
+    eta = 0;
+    puncture = 0;
     h = 1/100; % spatial grid
     N=round((r_max-r_min)/h);
     r=(r_min+h/2:h:r_max-h/2);
     % time at which we want to end the simulation
-    t_end=50;
+    t_end=5;
 
     % time to solve the equations
     tspan = [0 t_end];
     % initial condition
-    y0 = initial_cond(h,r_min,r_max,1)
+    %y0 = initial_cond(h,r_min,r_max,0);
     % if we want to plot the RHS we call the function below where the
     % inputs are plot_RHS(num_iterations, r_min, r_max, puncture (0 or 1))
-    %plot_RHS(20,1,10,0)
-    % solving step
-    [t,y] = ode45(@(t,y) dydt(t,y,h,N),tspan,y0);
-    %getting the output size
-    [t_size,y_size] = size(y)
-    % reshaping the array so it's nicer to unpackage
-    for iter=1:t_size
-        U(iter,:,:)=reshape(y(iter,:),[],n_var);
-    end
-    %unpackaging
-    alpha=U(:,:,1);
-    beta_r=U(:,:,2);
-    B_r = U(:,:,3);
-    chi=U(:,:,4);
-	g_rr=U(:,:,5);
-	g_thth=U(:,:,6);
-	A_rr=U(:,:,7);
-	K=U(:,:,8);
-	Gamma_r=U(:,:,9);
-    H=U(:,:,10);
-    M_r=U(:,:,11);
-    G=U(:,:,12);
-    %plotting results
-    for iter = 1:t_size
-       plot(r, chi(iter,:))
-       pause(0.005)
-    end
+    plot_RHS(20,r_min,r_max)
+    %solving step
+%     [t,y] = ode45(@(t,y) dydt(t,y,h,N),tspan,y0);
+%     %getting the output size
+%     [t_size,y_size] = size(y)
+%     % reshaping the array so it's nicer to unpackage
+%     U = reshape(y, t_size, [], n_var);
+%     %unpackaging
+%     size(U)
+%     alpha=U(:,:,1);
+%     beta_r=U(:,:,2);
+%     B_r = U(:,:,3);
+%     chi=U(:,:,4);
+% 	g_rr=U(:,:,5);
+% 	g_thth=U(:,:,6);
+% 	A_rr=U(:,:,7);
+% 	K=U(:,:,8);
+% 	Gamma_r=U(:,:,9);
+%     H=U(:,:,10);
+%     M_r=U(:,:,11);
+%     G=U(:,:,12);
+%     %plotting results
+%     for iter = 1:t_size
+%        plot(r, beta_r(iter,:))
+%        pause(0.001) 
+%     end
 end
 
 function U=dydt(t, v_old, h, N)
     global n_var
     global r_min
     global r_max
-    eta = 0;
-    v = 1;
+    global v
+    global diss_on
+    global eta
+    global puncture
     U = zeros(n_var*N,1);
     % unpacking our previous state
     v_old=reshape(v_old,[],n_var);
@@ -81,9 +88,16 @@ function U=dydt(t, v_old, h, N)
     Gamma_r_p = f_prime(Gamma_r,h,-Gamma_r(2),-Gamma_r(1),-2/(r_max+h/2),-2/(r_max+3*h/2),N);
     % The initial conditions below are what we used before for r_min = 1.
     % at r_min = 0 some stuff go wrong
-    %g_thth_p = f_prime(g_thth,h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
-    %g_thth_pp = f_pprime(g_thth,h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
-    %Gamma_r_p = f_prime(Gamma_r,h,-Gamma_r(2),-Gamma_r(1),-2/(r_max+h/2),-2/(r_max+3*h/2) ,N);
+    if r_min ~= 0
+        g_thth_p = f_prime(g_thth,h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
+        g_thth_pp = f_pprime(g_thth,h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
+        Gamma_r_p = f_prime(Gamma_r,h,-2/(r_min-3*h/2),-2/(r_min-h/2),-2/(r_max+h/2),-2/(r_max+3*h/2) ,N);
+    end
+    % appropriate boundary conditions for flat space
+    if puncture == 0
+        chi_p = f_prime(chi,h,chi(2),chi(1),1,1,N);
+        chi_pp = f_pprime(chi,h,chi(2),chi(1),1,1,N);
+    end
     
     % constraint evolution equations
     H_p = f_prime(H,h,H(2),H(1),0,0,N);
@@ -93,17 +107,23 @@ function U=dydt(t, v_old, h, N)
     G_pp = f_pprime(G,h,G(2),G(1),0,0,N);
     
     % time derivatives for each state variable
-    alpha_t = beta_r.*alpha_p-2*alpha.*K; % eqn 1
-    beta_r_t = 3/4*B_r+beta_r.*beta_r_p; % note this is only 2a), what is B_r?
+    alpha_t = beta_r.*alpha_p-2*alpha.*K...
+              +diss_on*KreissOliger(alpha,0.05,h,alpha(3),alpha(2),alpha(1),1,1,1,N); % eqn 1
+    beta_r_t = 3/4*B_r+beta_r.*beta_r_p...
+               +diss_on*KreissOliger(beta_r,0.05,h,-beta_r(3),-beta_r(2),-beta_r(1),0,0,0,N); % note this is only 2a), what is B_r?
     chi_t = 2/3*K.*alpha.*chi - v.*beta_r.*g_rr_p.*chi./(3*g_rr)...
             -2*v.*beta_r.*g_thth_p.*chi./(3*g_thth)-2/3*v.*beta_r_p.*chi...
-            +beta_r.*chi_p;
+            +beta_r.*chi_p...
+            +diss_on*KreissOliger(chi,0.05,h,chi(3),chi(2),chi(1),...
+            power(1 + 1/2/(r_max+h/2), -4),power(1 + 1/2/(r_max+3*h/2), -4),power(1 + 1/2/(r_max+5*h/2), -4),N);
     g_rr_t = -2*A_rr.*alpha-v.*beta_r.*g_rr_p./3+beta_r.*g_rr_p...
              -2*g_rr.*v.*beta_r.*g_thth_p./(3*g_thth)+2*g_rr.*beta_r_p...
-             -2/3*g_rr.*v.*beta_r_p;
+             -2/3*g_rr.*v.*beta_r_p...
+             +diss_on*KreissOliger(g_rr,0.05,h,g_rr(3),g_rr(2),g_rr(1),1,1,1,N);
     g_thth_t = A_rr.*g_thth.*alpha./g_rr-g_thth.*v.*beta_r.*g_rr_p./(3*g_rr)...
                -2/3*v.*beta_r.*g_thth_p+beta_r.*g_thth_p...
-               -2/3*g_thth.*v.*beta_r_p;
+               -2/3*g_thth.*v.*beta_r_p...
+               +diss_on*KreissOliger(g_thth,0.05,h,g_thth(3),g_thth(2),g_thth(1),(r_max+h/2)^2,(r_max+3*h/2)^2,(r_max+5*h/2)^2,N);
     A_rr_t = -2*alpha.*A_rr.^2./g_rr+K.*alpha.*A_rr-v.*beta_r.*g_rr_p.*A_rr./(3*g_rr)...
              -2*v.*beta_r.*g_thth_p.*A_rr./(3*g_thth)-2/3*v.*beta_r_p.*A_rr...
              +2*beta_r_p.*A_rr+2*alpha.*chi.*g_rr_p.^2./(3*g_rr.^2)... % end of first line
@@ -113,10 +133,12 @@ function U=dydt(t, v_old, h, N)
              +chi.*g_thth_p.*alpha_p./(3*g_thth)-alpha.*g_rr_p.*chi_p./(6*g_rr)...
              -alpha.*g_thth_p.*chi_p./(6*g_thth)-2/3*alpha_p.*chi_p...
              -alpha.*chi.*g_rr_pp./(3*g_rr)+alpha.*chi.*g_thth_pp./(3*g_thth)...
-             -2/3*chi.*alpha_pp+alpha.*chi_pp/3;
+             -2/3*chi.*alpha_pp+alpha.*chi_pp/3....
+             +diss_on*KreissOliger(A_rr,0.05,h,A_rr(3),A_rr(2),A_rr(1),0,0,0,N);
     K_t = 3*alpha.*A_rr.^2./(2*g_rr.^2)+K.^2.*alpha./3+beta_r.*K_p...
           +chi.*g_rr_p.*alpha_p./(2*g_rr.^2)-chi.*g_thth_p.*alpha_p./(g_rr.*g_thth)...
-          +alpha_p.*chi_p./(2*g_rr)-chi.*alpha_pp./g_rr;
+          +alpha_p.*chi_p./(2*g_rr)-chi.*alpha_pp./g_rr...
+          +diss_on*KreissOliger(K,0.05,h,K(3),K(2),K(1),0,0,0,N);
     Gamma_r_t = -v.*beta_r.*g_thth_p.^2./(g_rr.*g_thth.^2)...
                 +A_rr.*alpha.*g_thth_p./(g_rr.^2.*g_thth)...
                -v.*beta_r_p.*g_thth_p./(3*g_rr.*g_thth)+beta_r_p.*g_thth_p./(g_rr.*g_thth)...
@@ -125,9 +147,11 @@ function U=dydt(t, v_old, h, N)
                +v.*g_rr_p.*beta_r_p./(2*g_rr.^2)-g_rr_p.*beta_r_p./(2*g_rr.^2)...
                -3*A_rr.*alpha.*chi_p./(g_rr.^2.*chi)+v.*beta_r.*g_rr_pp./(6*g_rr.^2)...
                +v.*beta_r.*g_thth_pp./(3*g_rr.*g_thth)+v.*beta_r_pp./(3*g_rr)...
-               +beta_r_pp./g_rr;
+               +beta_r_pp./g_rr...
+               +diss_on*KreissOliger(Gamma_r,0.05,h,-Gamma_r(3),-Gamma_r(2),-Gamma_r(1),-2/(r_max+h/2),-2/(r_max+3*h/2),-2/(r_max+5*h/2),N);
     % This has to be here since it uses Gamma_r_t
-    B_r_t = Gamma_r_t+beta_r.*(B_r_p - Gamma_r_p) - eta.*B_r;
+    B_r_t = Gamma_r_t+beta_r.*(B_r_p - Gamma_r_p) - eta.*B_r...
+           +diss_on*KreissOliger(K,0.05,h,-B_r(3),-B_r(2),-B_r(1),0,0,0,N);
     % This is from 2b). Not sure what the parameter \eta should be but I've set it to 0 for now above.
     
     % Constraint evolution system
@@ -142,9 +166,10 @@ function U=dydt(t, v_old, h, N)
     
 end
 
-function v_old=initial_cond(h,r_min,r_max,puncture)
+function v_old=initial_cond(h,r_min,r_max)
     % puncture == 1 means we have a puncture, otherwise we have flat space
     global n_var
+    global puncture
     M =1;
     N=round((r_max-r_min)/h);
     r=(r_min+h/2:h:r_max-h/2);
@@ -165,15 +190,14 @@ function v_old=initial_cond(h,r_min,r_max,puncture)
     
     if puncture == 1
     	% punctured Schwarzchild BH ICs
- 	if s==1
+        if s==1
  	        % tune r0 near 2 but not equal or above
          	chi = cap(1.8,r.',M,N);
- 	else
+        else
  		% tune r0 near 0 but not equal or below
         chi = power(1 + M/2./(r.'), -4);
  		%chi = power(1.+M/2.*inv_r(r.',.25,N),-4.);
- 	end
-
+        end
     end
     
     % radial derivatives
@@ -190,7 +214,7 @@ function v_old=initial_cond(h,r_min,r_max,puncture)
     g_thth_pp = f_pprime(g_thth,h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
     A_rr_p =  f_prime(A_rr,h,0,0,0,0,N);
     K_p = f_prime(K,h,0,0,0,0,N);
-    Gamma_r_p = f_prime(Gamma_r,h, -Gamma_r(2), -Gamma_r(1),-2/(r_max+h/2),-2/(r_max+3*h/2),N);
+    Gamma_r_p = f_prime(Gamma_r,h, -2/(r_min-3*h/2), -2/(r_min-h/2),-2/(r_max+h/2),-2/(r_max+3*h/2),N);
     
     % Building constraints
     H = -3/2*A_rr.*A_rr./g_rr./g_rr + 2/3.*K.*K - 5/2.*chi_p.*chi_p./chi./g_rr...
@@ -216,13 +240,13 @@ function v_old=initial_cond(h,r_min,r_max,puncture)
     v_old(:,12) = G;
 end
 
-function plot_RHS(n_iter,r_min,r_max,puncture)
+function plot_RHS(n_iter,r_min,r_max)
      L=zeros(1,10);
      H=zeros(1,10);
      for j=1:n_iter
          h=0.5^j;
          N = round((r_max-r_min)/h);
-         v_old = initial_cond(h,r_min,r_max,puncture);
+         v_old = initial_cond(h,r_min,r_max);
          U = dydt(1, v_old, h, N);
          U=reshape(U.',[],12);
          Uj=U(:,7);
@@ -231,6 +255,8 @@ function plot_RHS(n_iter,r_min,r_max,puncture)
      end
      %plot loglog plot
      loglog(H,L)
+     xlabel('h')
+     ylabel('RHS')
      %plot slope of loglog plot    
      %plot(log10(H(1,1:19)),(log10(L(1,2:20)) - log10(L(1,1:19)))./( log10(H(1,2:20)) - log10(H(1,1:19)) ) )
 end
@@ -296,7 +322,7 @@ end
 function v=KreissOliger(f,sigma,h,a,b,c,x,y,z,N)
     v=zeros(N,1);
     prefactor = (sigma*(-1)^6*h^5/2^6);
-    v(1) = prefactor*(f(4)-6*f(3)+15*f(2)-20*f(1)+15*c-6*b+1*a)./h^6;
+    v(1) = prefactor*(f(4)-6*f(3)+15*f(2)-20*f(1)+15*c-6*b+a)./h^6;
     v(2) = prefactor*(f(5)-6*f(4)+15*f(3)-20*f(2)+15*f(1)-6*c+b)./h^6;       
     v(3) = prefactor*(f(6)-6*f(5)+15*f(4)-20*f(3)+15*f(2)-6*f(1)+c)./h^6;  
     v(N-2) = prefactor*(x-6*f(N)+15*f(N-1)-20*f(N-2)+15*f(N-3)-6*f(N-4)+f(N-5))./h^6;         
