@@ -11,7 +11,7 @@ function bssn
     v = 1; % Eulerian condition (v=0) or Lagrangian condition (v=1)
     eta = 1; % eta parameter in the Gamma-driver condition
     n_var = 12; % number of functions to evolve
-    r_min = 0;
+    r_min = 1;
     r_max = 10;
     diss_on = 0; % dissipation (Kreiss-Oliger) on (=1) or off (=0)
     sigma = 0.1;
@@ -25,9 +25,8 @@ function bssn
 
     % time to solve the equations
     tspan = [0 t_end];
-    
-    
-    plot_RHS(20,r_min,r_max)
+
+   plot_RHS(20,r_min,r_max)
     
     
     %solving step
@@ -37,6 +36,8 @@ function bssn
 %      U=reshape(U.',[],12);
 %      Uj=U(:,7)
 %      plot(r, Uj)
+
+
 %     [t,y] = ode45(@(t,y) dydt(t,y,h,N),tspan,y0);
 %     %getting the output size
 %     [t_size,y_size] = size(y)
@@ -48,18 +49,27 @@ function bssn
 %     beta_r=U(:,:,2);
 %     B_r = U(:,:,3);
 %     chi=U(:,:,4);
-% 	g_rr=U(:,:,5);
-% 	g_thth=U(:,:,6);
-% 	A_rr=U(:,:,7);
-% 	K=U(:,:,8);
-% 	Gamma_r=U(:,:,9);
+% 	  g_rr=U(:,:,5);
+% 	  g_thth=U(:,:,6);
+% 	  A_rr=U(:,:,7);
+% 	  K=U(:,:,8);
+% 	  Gamma_r=U(:,:,9);
 %     H=U(:,:,10);
 %     M_r=U(:,:,11);
 %     G=U(:,:,12);
 %     %plotting results
-%     for iter = 1:t_size
-%        plot(r, beta_r(iter,:))
-%        pause(0.001) 
+% 
+%     for iter=1:t_size
+%         Q=reshape(y,t_size,[],n_var);
+%     end
+% 
+%     %unpackaging
+%     charac1=Q(:,:,1);
+%     charac2=Q(:,:,2);
+%     %plotting
+%     for iter=1:t_size
+%         plot(r,alpha(iter,:))
+%         pause(0.001)
 %     end
 end
 
@@ -116,14 +126,15 @@ function U=dydt(t, v_old, h, N)
         g_thth_pp = f_pprime(g_thth,h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
         Gamma_r_p = f_prime(Gamma_r,h,-2/(r_min-3*h/2),-2/(r_min-h/2),-2/(r_max+h/2),-2/(r_max+3*h/2) ,N);
     end
-    
+
+
     % constraint evolution equations
     H_p = f_prime(H,h,H(2),H(1),0,0,N);
     M_r_p = f_prime(M_r,h,M_r(2),M_r(1),0,0,N);
     M_r_pp = f_pprime(M_r,h,M_r(2),M_r(1),0,0,N);
     G_p = f_prime(G,h,G(2),G(1),0,0,N);
     G_pp = f_pprime(G,h,G(2),G(1),0,0,N);
-    
+
     % time derivatives for each state variable
     if precollapse == 0
         alpha_t = beta_r.*alpha_p-2*alpha.*K...
@@ -177,17 +188,48 @@ function U=dydt(t, v_old, h, N)
     B_r_t = Gamma_r_t+beta_r.*B_r_p - beta_r.*Gamma_r_p - eta.*B_r...
            +diss_on*KreissOliger(K,sigma,h,-B_r(3),-B_r(2),-B_r(1),0,0,0,N);
     % This is from 2b). Not sure what the parameter \eta should be but I've set it to 0 for now above.
-    
+
     % Constraint evolution system
     H_t = beta_r.*H + 2/3.*alpha.*K.*H-2.*alpha.*A_rr.*chi./g_rr.*G_p-2.*alpha./g_rr.*chi.*M_r_p...
-           + (alpha.*chi_p./g_rr+alpha.*chi.*g_rr_p./g_rr./g_rr-4.*alpha_p.*chi./g_rr...
-                -2.*alpha.*chi.*g_thth_p./g_thth).*M_r;
+        + (alpha.*chi_p./g_rr+alpha.*chi.*g_rr_p./g_rr./g_rr-4.*alpha_p.*chi./g_rr...
+        -2.*alpha.*chi.*g_thth_p./g_thth).*M_r;
     M_r_t = beta_r.*M_r_p + beta_r_p.*M_r - alpha.*K.*M_r - alpha_p./3.*H + alpha./3.*H_p + 2/3.*alpha.*chi.*G_pp...
-            +(2/3.*alpha_p.*chi - alpha.*chi_p./3 + alpha.*chi.*g_thth_p./g_thth).*G_p;
+        +(2/3.*alpha_p.*chi - alpha.*chi_p./3 + alpha.*chi.*g_thth_p./g_thth).*G_p;
     G_t = beta_r.*G_p+ 2.*alpha./g_rr.*M_r;
-    
+
     U = [alpha_t; beta_r_t; B_r_t; chi_t; g_rr_t; g_thth_t; A_rr_t; K_t; Gamma_r_t; H_t; M_r_t; G_t];
-    
+
+end
+
+function [charac1,charac2]=unpackage1(Z)
+charac1 = Z(:,1);
+charac2 = Z(:,2);
+
+end
+
+function Q=CHARAC(t, Z_old, h, N)
+    n_varr=2;
+    global r_min
+    global r_max
+    Q = zeros(n_varr*N,1);
+    % unpacking our previous state
+    Z_old=reshape(Z_old,[],n_varr);
+    r=(r_min+h/2:h:r_max-h/2);
+
+    [Gamma_r,A_rr,g_rr,chi,g_rr,g_thth] = unpackage1(Z_old);
+    for iter=1:t_size
+        chi_p = f_prime(chi(iter,:),h,1,1,1,1,N);
+        g_rr_p = f_prime(g_rr(iter,:),h,1,1,1,1,N);
+        g_thth_p = f_prime(g_thth(iter,:),h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
+
+        charac1= Gamma_r - 3/2.*A_rr./((g_rr.^3).*chi).^0.5 +1/2.*chi_p./(2.*g_rr.*chi)- 1/2.*g_rr_p./(2.*g_rr.^2)...
+            +g_thth_p./(2.*g_rr.*g_thth)+ K./(g_rr.*chi).^0.5;
+
+        charac2=Gamma_r + 3/2.*A_rr./((g_rr.^3).*chi).^0.5 +1/2.*chi_p./(2.*g_rr.*chi)- 1/2.*g_rr_p./(2.*g_rr.^2)...
+            +g_thth_p./(2.*g_rr.*g_thth)- K./(g_rr.*chi).^0.5;
+
+        Q=[charac1,charac2] ;
+    end
 end
 
 function v_old=initial_cond(h,r_min,r_max)
@@ -296,6 +338,8 @@ function plot_RHS(n_iter,r_min,r_max)
      %plot(log10(H(1,1:19)),(log10(L(1,2:20)) - log10(L(1,1:19)))./( log10(H(1,2:20)) - log10(H(1,1:19)) ) )
 end
 
+
+
 % this function unpackages the *compressed* state vector v
 % N is the length of the grid
 function [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, H, M_r, G]=unpackage(v)
@@ -345,25 +389,19 @@ function chi0=cap(r0,r,M,N)
     chi0 = power(f,4).';
 end
 
-% capped 1/r
-function [R]=inv_r(r,r_0,N)
-	a=(1./r_0).*ones(N,1);
-	R = a+(1./r-a).*heaviside(r-a);
-end
-
 % Kreiss-Oliger dissipation term
 % since our finite differencing is fourth order we have 6th order third
 % derivative, which requires 4 points to each side
 function v=KreissOliger(f,sigma,h,a,b,c,x,y,z,N)
     v=zeros(N,1);
     prefactor = (sigma*(-1)^6*h^5/2^6);
-    v(1) = prefactor*(f(4)-6*f(3)+15*f(2)-20*f(1)+15*c-6*b+a)./h^6;
-    v(2) = prefactor*(f(5)-6*f(4)+15*f(3)-20*f(2)+15*f(1)-6*c+b)./h^6;       
-    v(3) = prefactor*(f(6)-6*f(5)+15*f(4)-20*f(3)+15*f(2)-6*f(1)+c)./h^6;  
-    v(N-2) = prefactor*(x-6*f(N)+15*f(N-1)-20*f(N-2)+15*f(N-3)-6*f(N-4)+f(N-5))./h^6;         
-    v(N-1) = prefactor*(y-6*x+15*f(N)-20*f(N-1)+15*f(N-2)-6*f(N-3)+f(N-4))./h^6;    
-    v(N) = prefactor*(z-6*y+15*x-20*f(N)+15*f(N-1)-6*f(N-2)+f(N-3))./h^6;          
+    v(1) = prefactor*(f(4)-6*f(3)+15*f(2)-20*f(1)+15*c-6*b+1*a)./h^6;
+    v(2) = prefactor*(f(5)-6*f(4)+15*f(3)-20*f(2)+15*f(1)-6*c+b)./h^6;
+    v(3) = prefactor*(f(6)-6*f(5)+15*f(4)-20*f(3)+15*f(2)-6*f(1)+c)./h^6;
+    v(N-2) = prefactor*(x-6*f(N)+15*f(N-1)-20*f(N-2)+15*f(N-3)-6*f(N-4)+f(N-5))./h^6;
+    v(N-1) = prefactor*(y-6*x+15*f(N)-20*f(N-1)+15*f(N-2)-6*f(N-3)+f(N-4))./h^6;
+    v(N) = prefactor*(z-6*y+15*x-20*f(N)+15*f(N-1)-6*f(N-2)+f(N-3))./h^6;
     % Computing the middle parts
     v(4:N-3) = prefactor*(f(7:N)-6*f(6:N-1)+15*f(5:N-2)-20*f(4:N-3)...
-               +15*f(3:N-4)-6*f(2:N-5)+f(1:N-6))./h^6;
+        +15*f(3:N-4)-6*f(2:N-5)+f(1:N-6))./h^6;
 end
