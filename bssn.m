@@ -409,13 +409,22 @@ end
 % Horizon and expansion 
 function [h] = Hor(g_rr,g_thth,g_thth_p,K,A_rr,r0,r,M,N)
     h=0.;
+    j=0;
     % safe to invert capped chi
     chi0_inv=1./cap(r0,r,M,N);
     % reconstruct thth-entry of full extrinsic curvature
-    K_thth = chi0_inv.*(-A_rr.*g_thth./g_rr + 1/3.*g_thth.*K);
-            % Leo: is it safe to invert g_rr/g_thth and take sqrt of it?
-    % expansion Theta (Eq. (3.3) in the apparent horizon finding paper)
-    Theta = g_thth_p./g_thth./sqrt(g_rr)-2.*K./g_thth;
+    if j==0
+        % without dividing by g_thth prior to Theta 
+        K_thth = chi0_inv.*(-A_rr.*g_thth./g_rr + 1/3.*g_thth.*K);
+          % Leo: is it safe to invert g_rr/g_thth and take sqrt of it?
+        % expansion Theta (Eq. (3.3) in the apparent horizon finding paper)
+        Theta = g_thth_p./g_thth./sqrt(g_rr)-2.*K_thth./g_thth;
+    else
+        % dividing g_thth prior to Theta
+        K_thth = chi0_inv.*(-A_rr./g_rr + 1/3.*K);
+        % expansion Theta (Eq. (3.3) in the apparent horizon finding paper)
+        Theta = g_thth_p./g_thth./sqrt(g_rr)-2.*K_thth;
+    end
      
     % Simple root-finder for horizon
     s = 0.;
