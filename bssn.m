@@ -57,10 +57,14 @@ function bssn
 %     H=U(:,:,10);
 %     M_r=U(:,:,11);
 %     G=U(:,:,12);
+
 %     %plotting results
 % 
 %     for iter=1:t_size
 %         Q=reshape(y,t_size,[],n_var);
+%         % Horizon
+%         g_thth_p(iter,:) = f_prime(g_thth(iter,:),h,g_thth(iter,2), g_thth(iter,1), (r_max+h/2)^2,(r_max+3*h/2)^2,N);
+%         hor(iter.:) = Hor(g_rr(iter.:),g_thth(iter,:),g_thth_p(iter,:),K(iter,:),A_rr(iter,:),chi(iter,:));
 %     end
 % 
 %     %unpackaging
@@ -187,7 +191,7 @@ function U=dydt(t, v_old, h, N)
     % This has to be here since it uses Gamma_r_t
     B_r_t = Gamma_r_t+beta_r.*B_r_p - beta_r.*Gamma_r_p - eta.*B_r...
            +diss_on*KreissOliger(K,sigma,h,-B_r(3),-B_r(2),-B_r(1),0,0,0,N);
-    % This is from 2b). Not sure what the parameter \eta should be but I've set it to 0 for now above.
+    % This is from 2b). Not sure what the parameter \eta should be but I've set it to 0 for now
 
     % Constraint evolution system
     H_t = beta_r.*H + 2/3.*alpha.*K.*H-2.*alpha.*A_rr.*chi./g_rr.*G_p-2.*alpha./g_rr.*chi.*M_r_p...
@@ -198,6 +202,7 @@ function U=dydt(t, v_old, h, N)
     G_t = beta_r.*G_p+ 2.*alpha./g_rr.*M_r;
 
     U = [alpha_t; beta_r_t; B_r_t; chi_t; g_rr_t; g_thth_t; A_rr_t; K_t; Gamma_r_t; H_t; M_r_t; G_t];
+    
 
 end
 
@@ -407,21 +412,20 @@ function v=KreissOliger(f,sigma,h,a,b,c,x,y,z,N)
 end
 
 % Horizon and expansion 
-function [h] = Hor(g_rr,g_thth,g_thth_p,K,A_rr,r0,r,M,N)
+function [h] = Hor(g_rr,g_thth,g_thth_p,K,A_rr,chi)
     h=0.;
     j=0;
-    % safe to invert capped chi
-    chi0_inv=1./cap(r0,r,M,N);
+    chi_inv = 1./chi;
     % reconstruct thth-entry of full extrinsic curvature
     if j==0
         % without dividing by g_thth prior to Theta 
-        K_thth = chi0_inv.*(-A_rr.*g_thth./g_rr + 1/3.*g_thth.*K);
+        K_thth = chi_inv.*(-A_rr.*g_thth./g_rr + 1/3.*g_thth.*K);
           % Leo: is it safe to invert g_rr/g_thth and take sqrt of it?
         % expansion Theta (Eq. (3.3) in the apparent horizon finding paper)
         Theta = g_thth_p./g_thth./sqrt(g_rr)-2.*K_thth./g_thth;
     else
         % dividing g_thth prior to Theta
-        K_thth = chi0_inv.*(-A_rr./g_rr + 1/3.*K);
+        K_thth = chi_inv.*(-A_rr./g_rr + 1/3.*K);
         % expansion Theta (Eq. (3.3) in the apparent horizon finding paper)
         Theta = g_thth_p./g_thth./sqrt(g_rr)-2.*K_thth;
     end
