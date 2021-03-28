@@ -405,3 +405,35 @@ function v=KreissOliger(f,sigma,h,a,b,c,x,y,z,N)
     v(4:N-3) = prefactor*(f(7:N)-6*f(6:N-1)+15*f(5:N-2)-20*f(4:N-3)...
         +15*f(3:N-4)-6*f(2:N-5)+f(1:N-6))./h^6;
 end
+
+% Horizon and expansion 
+function [h] = Hor(g_rr,g_thth,g_thth_p,K,A_rr,r0,r,M,N)
+    h=0.;
+    % safe to invert capped chi
+    chi0_inv=1./cap(r0,r,M,N);
+    % reconstruct thth-entry of full extrinsic curvature
+    K_thth = chi0_inv.*(-A_rr.*g_thth./g_rr + 1/3.*g_thth.*K);
+            % Leo: is it safe to invert g_rr and take sqrt of it?
+    % expansion Theta (Eq. (3.3) in the apparent horizon finding paper)
+    Theta = g_thth_p./g_thth./sqrt(g_rr)-2.*K;
+     
+    % Simple root-finder for horizon
+    s = 0.;
+    % threshold "0" up to machine precision
+    hold = 1.e-15;
+    for i=1:size(r)-1
+        s = Theta(i)*Theta(i+1);
+        % negative successive multiples => Theta crosses 0 at index i
+        if s < hold
+            % average between radii i and i+1
+            h = 1/2*(r(i)+r(i+1));
+            % terminate loop
+            break;
+                  % does break work in Matlab? I know it works in C++
+        end
+    end
+end
+            
+        
+
+
