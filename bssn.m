@@ -11,12 +11,12 @@ function bssn
     v = 1; % Eulerian condition (v=0) or Lagrangian condition (v=1)
     eta = 1; % eta parameter in the Gamma-driver condition
     n_var = 12; % number of functions to evolve
-    r_min = 1;
+    r_min = 0;
     r_max = 10;
     diss_on = 0; % dissipation (Kreiss-Oliger) on (=1) or off (=0)
     sigma = 0.1;
-    puncture = 0;
-    precollapse = 0;
+    puncture = 1;
+    precollapse = 1;
     h = 1/100; % spatial grid
     N=round((r_max-r_min)/h);
     r=(r_min+h/2:h:r_max-h/2);
@@ -26,39 +26,48 @@ function bssn
     % time to solve the equations
     tspan = [0 t_end];
 
-   plot_RHS(20,r_min,r_max)
+    %plot_RHS(20,r_min,r_max)
     
     
     %solving step
     % initial condition
-%      y0 = initial_cond(h,r_min,r_max);
-%      U=dydt(1,y0,h,N);
-%      U=reshape(U.',[],12);
-%      Uj=U(:,7)
-%      plot(r, Uj)
+     y0 = initial_cond(h,r_min,r_max);
+     U=dydt(1,y0,h,N);
+     U=reshape(U.',[],12);
+     Uj=U(:,7);
+     plot(r, Uj)
 
 
-%     [t,y] = ode45(@(t,y) dydt(t,y,h,N),tspan,y0);
-%     %getting the output size
-%     [t_size,y_size] = size(y)
-%     % reshaping the array so it's nicer to unpackage
-%     U = reshape(y, t_size, [], n_var);
-%     %unpackaging
+    [t,y] = ode45(@(t,y) dydt(t,y,h,N),tspan,y0);
+    %getting the output size
+    [t_size,y_size] = size(y)
+    % reshaping the array so it's nicer to unpackage
+    U = reshape(y, t_size, [], n_var);
+    [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, H, M_r, G] = var_t(U);
+    %unpackaging
 %     size(U)
 %     alpha=U(:,:,1);
 %     beta_r=U(:,:,2);
 %     B_r = U(:,:,3);
 %     chi=U(:,:,4);
-% 	  g_rr=U(:,:,5);
-% 	  g_thth=U(:,:,6);
-% 	  A_rr=U(:,:,7);
-% 	  K=U(:,:,8);
-% 	  Gamma_r=U(:,:,9);
+% 	g_rr=U(:,:,5);
+% 	g_thth=U(:,:,6);
+% 	A_rr=U(:,:,7);
+% 	K=U(:,:,8);
+% 	Gamma_r=U(:,:,9);
 %     H=U(:,:,10);
 %     M_r=U(:,:,11);
 %     G=U(:,:,12);
 
 %     %plotting results
+
+    for iter=1:t_size
+        [charac1, charac2]=CHARAC(alpha(:,iter), beta_r(:,iter), B_r(:,iter),...
+               chi(:,iter), g_rr(:,iter), g_thth(:,iter), A_rr(:,iter),...
+               K(:,iter), Gamma_r(:,iter), h, N);
+        plot(r, charac1)
+        pause(0.001)
+    end
 % 
 %     for iter=1:t_size
 %         Q=reshape(y,t_size,[],n_var);
@@ -206,35 +215,40 @@ function U=dydt(t, v_old, h, N)
 
 end
 
-function [charac1,charac2]=unpackage1(Z)
-charac1 = Z(:,1);
-charac2 = Z(:,2);
-
+function [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, H, M_r, G]=var_t(U)
+    alpha=U(:,:,1).';
+    size(alpha)
+    beta_r=U(:,:,2).';
+    B_r = U(:,:,3).';
+    chi=U(:,:,4).';
+	g_rr=U(:,:,5).';
+	g_thth=U(:,:,6).';
+	A_rr=U(:,:,7).';
+	K=U(:,:,8).';
+	Gamma_r=U(:,:,9).';
+    H=U(:,:,10).';
+    M_r=U(:,:,11).';
+    G=U(:,:,12).';
 end
 
-function Q=CHARAC(t, Z_old, h, N)
+function [charac1, charac2]=CHARAC(alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, h, N)
     n_varr=2;
     global r_min
     global r_max
-    Q = zeros(n_varr*N,1);
+    global puncture
     % unpacking our previous state
-    Z_old=reshape(Z_old,[],n_varr);
-    r=(r_min+h/2:h:r_max-h/2);
+    %Z_old=reshape(Z_old,[],n_varr);
 
-    [Gamma_r,A_rr,g_rr,chi,g_rr,g_thth] = unpackage1(Z_old);
-    for iter=1:t_size
-        chi_p = f_prime(chi(iter,:),h,1,1,1,1,N);
-        g_rr_p = f_prime(g_rr(iter,:),h,1,1,1,1,N);
-        g_thth_p = f_prime(g_thth(iter,:),h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
+    %[Gamma_r,A_rr,g_rr,chi,g_rr,g_thth] = unpackage1(Z_old);
+    chi_p = f_prime(chi,h,chi(2),chi(1),power(1 + 1/2/(r_max+h/2), -4),power(1 + 1/2/(r_max+3*h/2), -4),N);
+    g_rr_p = f_prime(g_rr,h,g_rr(2),g_rr(1),1,1,N);
+    g_thth_p = f_prime(g_thth,h,g_thth(2), g_thth(1),(r_max+h/2)^2,(r_max+3*h/2)^2,N);
 
-        charac1= Gamma_r - 3/2.*A_rr./((g_rr.^3).*chi).^0.5 +1/2.*chi_p./(2.*g_rr.*chi)- 1/2.*g_rr_p./(2.*g_rr.^2)...
-            +g_thth_p./(2.*g_rr.*g_thth)+ K./(g_rr.*chi).^0.5;
+    charac1= Gamma_r - 3/2.*A_rr./((g_rr.^3).*chi).^0.5 + 1/2*chi_p./(2*g_rr.*chi)-g_rr_p./(2.*g_rr.^2)...
+        +g_thth_p./(2.*g_rr.*g_thth)+ K./(g_rr.*chi).^0.5;
 
-        charac2=Gamma_r + 3/2.*A_rr./((g_rr.^3).*chi).^0.5 +1/2.*chi_p./(2.*g_rr.*chi)- 1/2.*g_rr_p./(2.*g_rr.^2)...
-            +g_thth_p./(2.*g_rr.*g_thth)- K./(g_rr.*chi).^0.5;
-
-        Q=[charac1,charac2] ;
-    end
+    charac2=Gamma_r + 3/2.*A_rr./((g_rr.^3).*chi).^0.5 +1/2.*chi_p./(2.*g_rr.*chi)-g_rr_p./(2.*g_rr.^2)...
+        +g_thth_p./(2.*g_rr.*g_thth)- K./(g_rr.*chi).^0.5;
 end
 
 function v_old=initial_cond(h,r_min,r_max)
