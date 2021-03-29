@@ -12,7 +12,7 @@ function bssn
     eta = 1; % eta parameter in the Gamma-driver condition
     n_var = 12; % number of functions to evolve
     r_min = 0;
-    r_max = 10;
+    r_max = 20;
     diss_on = 0; % dissipation (Kreiss-Oliger) on (=1) or off (=0)
     sigma = 0.1;
     puncture = 1;
@@ -31,43 +31,24 @@ function bssn
     
     %solving step
     % initial condition
-     y0 = initial_cond(h,r_min,r_max);
-     U=dydt(1,y0,h,N);
-     U=reshape(U.',[],12);
-     Uj=U(:,7);
-     plot(r, Uj)
-
-
+    y0 = initial_cond(h,r_min,r_max);
     [t,y] = ode45(@(t,y) dydt(t,y,h,N),tspan,y0);
     %getting the output size
     [t_size,y_size] = size(y)
     % reshaping the array so it's nicer to unpackage
     U = reshape(y, t_size, [], n_var);
+    % unpackaging into var(time, space)
     [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, H, M_r, G] = var_t(U);
-    %unpackaging
-%     size(U)
-%     alpha=U(:,:,1);
-%     beta_r=U(:,:,2);
-%     B_r = U(:,:,3);
-%     chi=U(:,:,4);
-% 	g_rr=U(:,:,5);
-% 	g_thth=U(:,:,6);
-% 	A_rr=U(:,:,7);
-% 	K=U(:,:,8);
-% 	Gamma_r=U(:,:,9);
-%     H=U(:,:,10);
-%     M_r=U(:,:,11);
-%     G=U(:,:,12);
 
-%     %plotting results
-
+    %plotting results
     for iter=1:t_size
-        [charac1, charac2]=CHARAC(alpha(:,iter), beta_r(:,iter), B_r(:,iter),...
-               chi(:,iter), g_rr(:,iter), g_thth(:,iter), A_rr(:,iter),...
-               K(:,iter), Gamma_r(:,iter), h, N);
+        [charac1, charac2]=CHARAC(chi(:,iter), g_rr(:,iter), g_thth(:,iter),...
+            A_rr(:,iter),K(:,iter), Gamma_r(:,iter), h, N);
         plot(r, charac1)
         pause(0.001)
     end
+    xlabel('r')
+    ylabel('charac2')
 % 
 %     for iter=1:t_size
 %         Q=reshape(y,t_size,[],n_var);
@@ -231,7 +212,7 @@ function [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, H, M_r, G]=va
     G=U(:,:,12).';
 end
 
-function [charac1, charac2]=CHARAC(alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, h, N)
+function [charac1, charac2]=CHARAC(chi, g_rr, g_thth, A_rr, K, Gamma_r, h, N)
     n_varr=2;
     global r_min
     global r_max
@@ -244,7 +225,7 @@ function [charac1, charac2]=CHARAC(alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, 
     g_rr_p = f_prime(g_rr,h,g_rr(2),g_rr(1),1,1,N);
     g_thth_p = f_prime(g_thth,h,g_thth(2), g_thth(1),(r_max+h/2)^2,(r_max+3*h/2)^2,N);
 
-    charac1= Gamma_r - 3/2.*A_rr./((g_rr.^3).*chi).^0.5 + 1/2*chi_p./(2*g_rr.*chi)-g_rr_p./(2.*g_rr.^2)...
+    charac1= Gamma_r - 3/2.*A_rr./(sqrt(g_rr.^3).*chi)+ 1/2*chi_p./(2*g_rr.*chi)-g_rr_p./(2.*g_rr.^2)...
         +g_thth_p./(2.*g_rr.*g_thth)+ K./(g_rr.*chi).^0.5;
 
     charac2=Gamma_r + 3/2.*A_rr./((g_rr.^3).*chi).^0.5 +1/2.*chi_p./(2.*g_rr.*chi)-g_rr_p./(2.*g_rr.^2)...
