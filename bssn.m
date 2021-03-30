@@ -88,15 +88,27 @@ function bssn
 % 
 % Horizon computation
 
-[horsize_r horsize_t] = size(var_t(U));
+
+[horsize_r,horsize_t] = size(var_t(U));
 hor=zeros(horsize_t,1);
 time=zeros(horsize_t,1);
+Theta=zeros(horsize_r,horsize_t);
+        % Horizon
     for iter=1:horsize_t
         time(iter) = t_end/horsize_t*iter;
-        hor(iter) = Hor(g_rr(:,iter),g_thth(:,iter),K(:,iter),A_rr(:,iter),chi(:,iter),N,r,h);
-    end
-    
+        [hor(iter),Theta(:,iter)] = Hor(g_rr(:,iter),g_thth(:,iter),K(:,iter),A_rr(:,iter),chi(:,iter),N,r,h);
+%  
+%         plot(r,Theta(:,iter))
+%         xlabel('r')
+%         ylabel('Expansion')
+%         pause(0.001)
+     end
+
+%      figure(2)
      plot(time,hor)
+     xlabel('t')
+     ylabel('Horizon')   
+     
       
 % 
 %     %unpackaging
@@ -468,7 +480,7 @@ function v=KreissOliger(f,sigma,h,a,b,c,x,y,z,N)
 end
 
 % Horizon and expansion 
-function [hum] = Hor(g_rr,g_thth,K,A_rr,chi,N,r,h)
+function [hum,Theta] = Hor(g_rr,g_thth,K,A_rr,chi,N,r,h)
     global r_max
     hum=0.;
     j=1;
@@ -487,12 +499,19 @@ function [hum] = Hor(g_rr,g_thth,K,A_rr,chi,N,r,h)
         % expansion Theta (Eq. (3.3) in the apparent horizon finding paper)
         Theta = g_thth_p./g_thth./sqrt(g_rr)-2.*K_thth;
     end
-
+    
     % Simple root-finder for horizon
     % threshold "0" up to machine precision
     hold = 1.e-15;
-    
-    for i=1:size(Theta)-1
+    % Detecting local minimum of Theta
+    j=1;
+    for i=1:size(Theta)
+        if Theta(i) == min(Theta);
+            j=i;
+        end
+    end
+    % Root search to the right of local minimum
+    for i=j:size(Theta)-1
         s = Theta(i)*Theta(i+1);
         % negative successive multiples => Theta crosses 0 at index i
         if s < hold
