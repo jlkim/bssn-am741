@@ -17,17 +17,17 @@ function bssn
     sigma = 0.1;
     puncture = 1;
     precollapse = 1;
-    h = 1/50; % spatial grid
-    N=round((r_max-r_min)/h)
+    h = 1/10; % spatial grid
+    N=round((r_max-r_min)/h);
     r=(r_min+h/2:h:r_max-h/2);
 
     
     t_end = 2;
-    %plot_RHS(20,r_min,r_max)
-    [U_coarse, t_size_coarse]=state_result(1/50, t_end);
-    [U_med, t_size_med]=state_result(1/100, t_end);
-    [U_fine, t_size_fine]=state_result(1/200, t_end);
-    [U_finest, t_size_finest]=state_result(1/400, t_end);
+    plot_RHS(20,r_min,r_max)
+    [U_coarse, t_size_coarse]=state_result(1/10, t_end);
+    [U_med, t_size_med]=state_result(1/20, t_end);
+    [U_fine, t_size_fine]=state_result(1/40, t_end);
+    [U_finest, t_size_finest]=state_result(1/80, t_end);
     
     [alpha_coarse, beta_r_coarse, B_r_coarse, chi_coarse, g_rr_coarse,...
     g_thth_coarse, A_rr_coarse, K_coarse, Gamma_r_coarse, H_coarse, M_r_coarse, G_coarse]=var_t(U_coarse);
@@ -39,8 +39,8 @@ function bssn
     A_rr_finest, K_finest, Gamma_r_finest, H_finest, M_r_finest, G_finest]=var_t(U_finest) ;
     
     error_medcoarse = error(beta_r_med(1:2:2*N, t_size_med), beta_r_coarse(:, t_size_coarse));
-    error_finemed = 16*error(beta_r_fine(1:4:N*4, t_size_fine),beta_r_med(1:2:2*N, t_size_med));
-    error_finestfine = 256*error(beta_r_finest(1:8:N*8, t_size_finest),beta_r_fine(1:4:4*N, t_size_fine));
+    error_finemed = 2*error(beta_r_fine(1:4:N*4, t_size_fine),beta_r_med(1:2:2*N, t_size_med));
+    error_finestfine = 4*error(beta_r_finest(1:8:N*8, t_size_finest),beta_r_fine(1:4:4*N, t_size_fine));
     plot(r, error_medcoarse, '-r');
     hold on
     plot(r, error_finemed, 'b--');
@@ -63,14 +63,15 @@ function bssn
 %     
 %     %solving step
 %     % initial condition
-%     y0 = initial_cond(h,r_min,r_max);
-%     [t,y] = ode45(@(t,y) dydt(t,y,h,N),tspan,y0);
-%     %getting the output size
-%     [t_size,y_size] = size(y)
-%     % reshaping the array so it's nicer to unpackage
-%     U = reshape(y, t_size, [], n_var);
-%     % unpackaging into var(time, space)
-%     [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, H, M_r, G] = var_t(U);
+%      tspan = [0 t_end];
+%      y0 = initial_cond(h,r_min,r_max);
+%      [t,y] = ode45(@(t,y) dydt(t,y,h,N),tspan,y0);
+%      %getting the output size
+%      [t_size,y_size] = size(y)
+%      % reshaping the array so it's nicer to unpackage
+%      U = reshape(y, t_size, [], n_var);
+%      % unpackaging into var(time, space)
+%      [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, H, M_r, G] = var_t(U);
     
     
 
@@ -79,6 +80,7 @@ function bssn
 %         [charac1, charac2]=CHARAC(chi(:,iter), g_rr(:,iter), g_thth(:,iter),...
 %             A_rr(:,iter),K(:,iter), Gamma_r(:,iter), h, N);
 %         plot(r, charac1)
+%         ylim([-5 5])
 %         pause(0.001)
 %     end
 %     xlabel('r')
@@ -113,7 +115,8 @@ function [U, t_size]=state_result(h, t_end)
     tspan = [0 t_end];
     
     y0 = initial_cond(h,r_min,r_max);
-    [t,y] = ode45(@(t,y) dydt(t,y,h,N),tspan,y0);
+    options = odeset('RelTol',1e-12,'AbsTol',1e-12);
+    [t,y] = ode45(@(t,y) dydt(t,y,h,N),tspan,y0, options);
 
     %getting the output size
     [t_size,y_size] = size(y);
@@ -272,7 +275,6 @@ function [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, H, M_r, G]=va
 end
 
 function [charac1, charac2]=CHARAC(chi, g_rr, g_thth, A_rr, K, Gamma_r, h, N)
-    n_varr=2;
     global r_min
     global r_max
 
@@ -280,10 +282,10 @@ function [charac1, charac2]=CHARAC(chi, g_rr, g_thth, A_rr, K, Gamma_r, h, N)
     g_rr_p = f_prime(g_rr,h,g_rr(2),g_rr(1),1,1,N);
     g_thth_p = f_prime(g_thth,h,g_thth(2), g_thth(1),(r_max+h/2)^2,(r_max+3*h/2)^2,N);
 
-    charac1= Gamma_r - 3/2.*A_rr./(sqrt(g_rr.^3).*chi)+ 1/2*chi_p./(2*g_rr.*chi)-g_rr_p./(2.*g_rr.^2)...
+    charac1=Gamma_r - 3/2.*A_rr./((g_rr.^3).*chi).^0.5+1/2*chi_p./(2*g_rr.*chi)-g_rr_p./(2.*g_rr.^2)...
         +g_thth_p./(2.*g_rr.*g_thth)+ K./(g_rr.*chi).^0.5;
 
-    charac2=Gamma_r + 3/2.*A_rr./((g_rr.^3).*chi).^0.5 +1/2.*chi_p./(2.*g_rr.*chi)-g_rr_p./(2.*g_rr.^2)...
+    charac2=Gamma_r + 3/2.*A_rr./((g_rr.^3).*chi).^0.5+1/2*chi_p./(2*g_rr.*chi)-g_rr_p./(2.*g_rr.^2)...
         +g_thth_p./(2.*g_rr.*g_thth)- K./(g_rr.*chi).^0.5;
 end
 
