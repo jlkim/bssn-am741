@@ -86,12 +86,18 @@ function bssn
 %     xlabel('r')
 %     ylabel('charac2')
 % 
-%     for iter=1:t_size
-%         Q=reshape(y,t_size,[],n_var);
-%         % Horizon
-%         g_thth_p(iter,:) = f_prime(g_thth(iter,:),h,g_thth(iter,2), g_thth(iter,1), (r_max+h/2)^2,(r_max+3*h/2)^2,N);
-%         hor(iter.:) = Hor(g_rr(iter.:),g_thth(iter,:),g_thth_p(iter,:),K(iter,:),A_rr(iter,:),chi(iter,:));
-%     end
+% Horizon computation
+
+[horsize_r horsize_t] = size(var_t(U));
+hor=zeros(horsize_t,1);
+time=zeros(horsize_t,1);
+    for iter=1:horsize_t
+        time(iter) = t_end/horsize_t*iter;
+        hor(iter) = Hor(g_rr(:,iter),g_thth(:,iter),K(:,iter),A_rr(:,iter),chi(:,iter),N,r,h);
+    end
+    
+     plot(time,hor)
+      
 % 
 %     %unpackaging
 %     charac1=Q(:,:,1);
@@ -462,10 +468,12 @@ function v=KreissOliger(f,sigma,h,a,b,c,x,y,z,N)
 end
 
 % Horizon and expansion 
-function [h] = Hor(g_rr,g_thth,g_thth_p,K,A_rr,chi)
-    h=0.;
-    j=0;
+function [hum] = Hor(g_rr,g_thth,K,A_rr,chi,N,r,h)
+    global r_max
+    hum=0.;
+    j=1;
     chi_inv = 1./chi;
+    g_thth_p = f_prime(g_thth,h,g_thth(2), g_thth(1),(r_max+h/2)^2,(r_max+3*h/2)^2,N);
     % reconstruct thth-entry of full extrinsic curvature
     if j==0
         % without dividing by g_thth prior to Theta 
@@ -479,24 +487,19 @@ function [h] = Hor(g_rr,g_thth,g_thth_p,K,A_rr,chi)
         % expansion Theta (Eq. (3.3) in the apparent horizon finding paper)
         Theta = g_thth_p./g_thth./sqrt(g_rr)-2.*K_thth;
     end
-     
+
     % Simple root-finder for horizon
-    s = 0.;
     % threshold "0" up to machine precision
     hold = 1.e-15;
-    for i=1:size(r)-1
+    
+    for i=1:size(Theta)-1
         s = Theta(i)*Theta(i+1);
         % negative successive multiples => Theta crosses 0 at index i
         if s < hold
             % average between radii i and i+1
-            h = 1/2*(r(i)+r(i+1));
+            hum = 1/2*(r(i)+r(i+1));
             % terminate loop
             break;
-                  % does break work in Matlab? I know it works in C++
         end
     end
 end
-            
-        
-
-
