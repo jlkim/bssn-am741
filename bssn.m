@@ -12,43 +12,77 @@ function bssn
     eta = 1; % eta parameter in the Gamma-driver condition
     n_var = 12; % number of functions to evolve
     r_min = 0;
-    r_max = 20;
+    r_max = 5;
     diss_on = 0; % dissipation (Kreiss-Oliger) on (=1) or off (=0)
     sigma = 0.1;
     puncture = 1;
     precollapse = 1;
-    h = 1/100; % spatial grid
-    N=round((r_max-r_min)/h);
+    h = 1/50; % spatial grid
+    N=round((r_max-r_min)/h)
     r=(r_min+h/2:h:r_max-h/2);
-    % time at which we want to end the simulation
-    t_end=10;
 
-    % time to solve the equations
-    tspan = [0 t_end];
-
+    
+    t_end = 2;
     %plot_RHS(20,r_min,r_max)
+    [U_coarse, t_size_coarse]=state_result(1/50, t_end);
+    [U_med, t_size_med]=state_result(1/100, t_end);
+    [U_fine, t_size_fine]=state_result(1/200, t_end);
+    [U_finest, t_size_finest]=state_result(1/400, t_end);
+    
+    [alpha_coarse, beta_r_coarse, B_r_coarse, chi_coarse, g_rr_coarse,...
+    g_thth_coarse, A_rr_coarse, K_coarse, Gamma_r_coarse, H_coarse, M_r_coarse, G_coarse]=var_t(U_coarse);
+    [alpha_med, beta_r_med, B_r_med, chi_med, g_rr_med, g_thth_med,...
+    A_rr_med, K_med, Gamma_r_med, H_med, M_r_med, G_med]=var_t(U_med);
+    [alpha_fine, beta_r_fine, B_r_fine, chi_fine, g_rr_fine, g_thth_fine,...
+    A_rr_fine, K_fine, Gamma_r_fine, H_fine, M_r_fine, G_fine]=var_t(U_fine) ;
+    [alpha_finest, beta_r_finest, B_r_finest, chi_finest, g_rr_finest, g_thth_finest,...
+    A_rr_finest, K_finest, Gamma_r_finest, H_finest, M_r_finest, G_finest]=var_t(U_finest) ;
+    
+    error_medcoarse = error(beta_r_med(1:2:2*N, t_size_med), beta_r_coarse(:, t_size_coarse));
+    error_finemed = 16*error(beta_r_fine(1:4:N*4, t_size_fine),beta_r_med(1:2:2*N, t_size_med));
+    error_finestfine = 256*error(beta_r_finest(1:8:N*8, t_size_finest),beta_r_fine(1:4:4*N, t_size_fine));
+    plot(r, error_medcoarse, '-r');
+    hold on
+    plot(r, error_finemed, 'b--');
+    plot(r, error_finestfine, 'g-.');
+    xlabel('$r$','Interpreter','latex');
+    ylabel('$\Delta \chi$','Interpreter','latex') ;
+    l=legend('$(\beta^r_{M/50}-\beta^r_{M/100})$', '$2(\beta^r_{M/100}-\beta^r_{M/200})$', '$4(\beta^r_{M/200}-\beta^r_{M/400})$');
+    set(l, 'Interpreter', 'latex');
+    set(l, 'FontSize', 14);
+    %plotting
+%     plot(r,chi_coarse(:, t_size_coarse), 'r')
+%     hold on
+%     plot(r,chi_med(:, t_size_med), 'b--')  
+%     plot(r,chi_fine(:, t_size_fine), 'g-.')  
+%     xlabel('$r$','Interpreter','latex')
+%     ylabel('$\chi$','Interpreter','latex') 
+%     legend('\eta = 0','\eta = 1','\eta = 2');
+%     xlim([0,10]);
+    
+%     
+%     %solving step
+%     % initial condition
+%     y0 = initial_cond(h,r_min,r_max);
+%     [t,y] = ode45(@(t,y) dydt(t,y,h,N),tspan,y0);
+%     %getting the output size
+%     [t_size,y_size] = size(y)
+%     % reshaping the array so it's nicer to unpackage
+%     U = reshape(y, t_size, [], n_var);
+%     % unpackaging into var(time, space)
+%     [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, H, M_r, G] = var_t(U);
     
     
-    %solving step
-    % initial condition
-    y0 = initial_cond(h,r_min,r_max);
-    [t,y] = ode45(@(t,y) dydt(t,y,h,N),tspan,y0);
-    %getting the output size
-    [t_size,y_size] = size(y)
-    % reshaping the array so it's nicer to unpackage
-    U = reshape(y, t_size, [], n_var);
-    % unpackaging into var(time, space)
-    [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, H, M_r, G] = var_t(U);
 
     %plotting results
-    for iter=1:t_size
-        [charac1, charac2]=CHARAC(chi(:,iter), g_rr(:,iter), g_thth(:,iter),...
-            A_rr(:,iter),K(:,iter), Gamma_r(:,iter), h, N);
-        plot(r, charac1)
-        pause(0.001)
-    end
-    xlabel('r')
-    ylabel('charac2')
+%     for iter=1:t_size
+%         [charac1, charac2]=CHARAC(chi(:,iter), g_rr(:,iter), g_thth(:,iter),...
+%             A_rr(:,iter),K(:,iter), Gamma_r(:,iter), h, N);
+%         plot(r, charac1)
+%         pause(0.001)
+%     end
+%     xlabel('r')
+%     ylabel('charac2')
 % 
 %     for iter=1:t_size
 %         Q=reshape(y,t_size,[],n_var);
@@ -66,6 +100,27 @@ function bssn
 %         pause(0.001)
 %     end
 end
+
+function [U, t_size]=state_result(h, t_end)
+    global n_var
+    global r_min
+    global r_max
+    N=round((r_max-r_min)/h);
+    r=(r_min+h/2:h:r_max-h/2);
+    
+    % time at which we want to end the simulation
+    % time to solve the equations
+    tspan = [0 t_end];
+    
+    y0 = initial_cond(h,r_min,r_max);
+    [t,y] = ode45(@(t,y) dydt(t,y,h,N),tspan,y0);
+
+    %getting the output size
+    [t_size,y_size] = size(y);
+    % reshaping the array so it's nicer to unpackage
+    U = reshape(y, t_size, [], n_var);
+end
+
 
 function U=dydt(t, v_old, h, N)
     global n_var
@@ -88,8 +143,8 @@ function U=dydt(t, v_old, h, N)
     
     % precollapsed alpha or unity
     if precollapse == 1
-        alpha_p = f_prime(alpha,h,alpha(2),alpha(1),power(1+1/2./(r_max+h/2),-2),power(1+1/2./(r_max+3*h/2),-2),N);
-        alpha_pp = f_pprime(alpha,h,alpha(2),alpha(1),power(1+1/2./(r_max+h/2),-2),power(1+1/2./(r_max+3*h/2),-2),N);
+        alpha_p = f_prime(alpha,h,alpha(2),alpha(1),power(1+0.5/(r_max+h/2),-2),power(1+1/2/(r_max+3*h/2),-2),N);
+        alpha_pp = f_pprime(alpha,h,alpha(2),alpha(1),power(1+0.5/(r_max+h/2),-2),power(1+1/2/(r_max+3*h/2),-2),N);
     else
         alpha_p = f_prime(alpha,h,alpha(2),alpha(1),1,1,N);
         alpha_pp = f_pprime(alpha,h,alpha(2),alpha(1),1,1,N);
@@ -136,7 +191,7 @@ function U=dydt(t, v_old, h, N)
     else
         alpha_t = beta_r.*alpha_p-2*alpha.*K...
                   +diss_on*KreissOliger(alpha,sigma,h,alpha(3),alpha(2),alpha(1),...
-                  power(1+1/2./(r_max+h/2),-2),power(1+1/2./(r_max+3*h/2),-2),power(1+1/2./(r_max+5*h/2),-2),N); % eqn 1
+                  power(1+1/2./(r_max+h/2),-2),power(1+1/2/(r_max+3*h/2),-2),power(1+1/2/(r_max+5*h/2),-2),N); % eqn 1
     end
     beta_r_t = 3/4*B_r+beta_r.*beta_r_p...
                +diss_on*KreissOliger(beta_r,sigma,h,-beta_r(3),-beta_r(2),-beta_r(1),0,0,0,N); % note this is only 2a), what is B_r?
@@ -179,7 +234,7 @@ function U=dydt(t, v_old, h, N)
                +beta_r_pp./g_rr...
                +diss_on*KreissOliger(Gamma_r,sigma,h,-Gamma_r(3),-Gamma_r(2),-Gamma_r(1),-2/(r_max+h/2),-2/(r_max+3*h/2),-2/(r_max+5*h/2),N);
     % This has to be here since it uses Gamma_r_t
-    B_r_t = Gamma_r_t+beta_r.*B_r_p - beta_r.*Gamma_r_p - eta.*B_r...
+    B_r_t = Gamma_r_t- eta.*B_r+beta_r.*B_r_p - beta_r.*Gamma_r_p ...
            +diss_on*KreissOliger(K,sigma,h,-B_r(3),-B_r(2),-B_r(1),0,0,0,N);
     % This is from 2b). Not sure what the parameter \eta should be but I've set it to 0 for now
 
@@ -196,9 +251,13 @@ function U=dydt(t, v_old, h, N)
 
 end
 
+% this requires the fine grid points to be at the same points
+function y=error(fine, coarse)
+    y=coarse-fine;
+end
+
 function [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, H, M_r, G]=var_t(U)
     alpha=U(:,:,1).';
-    size(alpha)
     beta_r=U(:,:,2).';
     B_r = U(:,:,3).';
     chi=U(:,:,4).';
@@ -216,11 +275,7 @@ function [charac1, charac2]=CHARAC(chi, g_rr, g_thth, A_rr, K, Gamma_r, h, N)
     n_varr=2;
     global r_min
     global r_max
-    global puncture
-    % unpacking our previous state
-    %Z_old=reshape(Z_old,[],n_varr);
 
-    %[Gamma_r,A_rr,g_rr,chi,g_rr,g_thth] = unpackage1(Z_old);
     chi_p = f_prime(chi,h,chi(2),chi(1),power(1 + 1/2/(r_max+h/2), -4),power(1 + 1/2/(r_max+3*h/2), -4),N);
     g_rr_p = f_prime(g_rr,h,g_rr(2),g_rr(1),1,1,N);
     g_thth_p = f_prime(g_thth,h,g_thth(2), g_thth(1),(r_max+h/2)^2,(r_max+3*h/2)^2,N);
@@ -267,7 +322,7 @@ function v_old=initial_cond(h,r_min,r_max)
          	chi = cap(1.8,r.',M,N);
         else
  		% tune r0 near 0 but not equal or below
-        chi = power(1 + M/2./(r.'), -4);
+        chi = power(1 + M./(2*r.'), -4);
  		%chi = power(1.+M/2.*inv_r(r.',.25,N),-4.);
         end
     end
@@ -337,8 +392,6 @@ function plot_RHS(n_iter,r_min,r_max)
      %plot slope of loglog plot    
      %plot(log10(H(1,1:19)),(log10(L(1,2:20)) - log10(L(1,1:19)))./( log10(H(1,2:20)) - log10(H(1,1:19)) ) )
 end
-
-
 
 % this function unpackages the *compressed* state vector v
 % N is the length of the grid
