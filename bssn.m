@@ -12,23 +12,22 @@ function bssn
     eta = 1; % eta parameter in the Gamma-driver condition
     n_var = 12; % number of functions to evolve
     r_min = 0;
-    r_max = 5;
+    r_max = 8;
     diss_on = 0; % dissipation (Kreiss-Oliger) on (=1) or off (=0)
     sigma = 0.1;
     puncture = 1;
     precollapse = 1;
-    h = 1/10; % spatial grid
+    h = 1/50; % spatial grid
     N=round((r_max-r_min)/h);
-    r=(r_min+h/2:h:r_max-h/2);
+    r=(r_min+h:h:r_max);
 
     
-    t_end = 2;
-    plot_RHS(20,r_min,r_max)
-    [U_coarse, t_size_coarse]=state_result(1/10, t_end);
-    [U_med, t_size_med]=state_result(1/20, t_end);
-    [U_fine, t_size_fine]=state_result(1/40, t_end);
-    [U_finest, t_size_finest]=state_result(1/80, t_end);
-    
+    t_end = 0.5;
+    %plot_RHS(20,r_min,r_max)
+    [U_coarse, t_size_coarse]=state_result(1/50, t_end);
+    [U_med, t_size_med]=state_result(1/100, t_end);
+    [U_fine, t_size_fine]=state_result(1/200, t_end);
+    [U_finest, t_size_finest]=state_result(1/400, t_end);     
     [alpha_coarse, beta_r_coarse, B_r_coarse, chi_coarse, g_rr_coarse,...
     g_thth_coarse, A_rr_coarse, K_coarse, Gamma_r_coarse, H_coarse, M_r_coarse, G_coarse]=var_t(U_coarse);
     [alpha_med, beta_r_med, B_r_med, chi_med, g_rr_med, g_thth_med,...
@@ -38,18 +37,26 @@ function bssn
     [alpha_finest, beta_r_finest, B_r_finest, chi_finest, g_rr_finest, g_thth_finest,...
     A_rr_finest, K_finest, Gamma_r_finest, H_finest, M_r_finest, G_finest]=var_t(U_finest) ;
     
-    error_medcoarse = error(beta_r_med(1:2:2*N, t_size_med), beta_r_coarse(:, t_size_coarse));
-    error_finemed = 2*error(beta_r_fine(1:4:N*4, t_size_fine),beta_r_med(1:2:2*N, t_size_med));
-    error_finestfine = 4*error(beta_r_finest(1:8:N*8, t_size_finest),beta_r_fine(1:4:4*N, t_size_fine));
-    plot(r, error_medcoarse, '-r');
+    size(chi_finest)
+%      error_medcoarse = error(chi_med(1:2:2*N, 1), chi_coarse(:, 1));
+%      error_finemed = 2*error(chi_fine(1:4:N*4, 1),chi_med(1:2:2*N, 1));
+%      error_finestfine = 4*error(chi_finest(1:8:N*8, 1),chi_fine(1:4:4*N, 1));
+     error_medcoarse = error(chi_med(2:2:2*N, t_size_med), chi_coarse(:, t_size_coarse));
+     error_finemed = 16*error(chi_fine(4:4:N*4, t_size_fine),chi_med(2:2:2*N, t_size_med));
+     error_finestfine = 16^2*error(chi_finest(8:8:N*8, t_size_finest),chi_fine(4:4:4*N, t_size_fine));
+    size(r)
+    size(error_medcoarse)
+    plot(r.', error_medcoarse, '-r');
     hold on
-    plot(r, error_finemed, 'b--');
-    plot(r, error_finestfine, 'g-.');
-    xlabel('$r$','Interpreter','latex');
+    plot(r.', error_finemed, 'b--');
+    plot(r.', error_finestfine, 'g-.');
+    xlabel('$r/M$','Interpreter','latex');
     ylabel('$\Delta \chi$','Interpreter','latex') ;
-    l=legend('$(\beta^r_{M/50}-\beta^r_{M/100})$', '$2(\beta^r_{M/100}-\beta^r_{M/200})$', '$4(\beta^r_{M/200}-\beta^r_{M/400})$');
+    title('$\Delta \chi$ at $t = 0.5M$', 'Interpreter', 'latex');
+    l=legend('$(\chi_{M/50}-\chi_{M/100})$', '$16(\chi_{M/100}-\chi_{M/200})$', '$256(\chi_{M/200}-\chi_{M/400})$');
     set(l, 'Interpreter', 'latex');
     set(l, 'FontSize', 14);
+    xlim([0,4])
     %plotting
 %     plot(r,chi_coarse(:, t_size_coarse), 'r')
 %     hold on
@@ -89,25 +96,25 @@ function bssn
 % Horizon computation
 
 
-[horsize_r,horsize_t] = size(var_t(U));
-hor=zeros(horsize_t,1);
-time=zeros(horsize_t,1);
-Theta=zeros(horsize_r,horsize_t);
-        % Horizon
-    for iter=1:horsize_t
-        time(iter) = t_end/horsize_t*iter;
-        [hor(iter),Theta(:,iter)] = Hor(g_rr(:,iter),g_thth(:,iter),K(:,iter),A_rr(:,iter),chi(:,iter),N,r,h);
-%  
-%         plot(r,Theta(:,iter))
-%         xlabel('r')
-%         ylabel('Expansion')
-%         pause(0.001)
-     end
-
-%      figure(2)
-     plot(time,hor)
-     xlabel('t')
-     ylabel('Horizon')   
+% [horsize_r,horsize_t] = size(var_t(U));
+% hor=zeros(horsize_t,1);
+% time=zeros(horsize_t,1);
+% Theta=zeros(horsize_r,horsize_t);
+%         % Horizon
+%     for iter=1:horsize_t
+%         time(iter) = t_end/horsize_t*iter;
+%         [hor(iter),Theta(:,iter)] = Hor(g_rr(:,iter),g_thth(:,iter),K(:,iter),A_rr(:,iter),chi(:,iter),N,r,h);
+% %  
+% %         plot(r,Theta(:,iter))
+% %         xlabel('r')
+% %         ylabel('Expansion')
+% %         pause(0.001)
+%      end
+% 
+% %      figure(2)
+%      plot(time,hor)
+%      xlabel('t')
+%      ylabel('Horizon')   
      
       
 % 
@@ -126,15 +133,16 @@ function [U, t_size]=state_result(h, t_end)
     global r_min
     global r_max
     N=round((r_max-r_min)/h);
-    r=(r_min+h/2:h:r_max-h/2);
+    r=(r_min+h:h:r_max);
     
     % time at which we want to end the simulation
     % time to solve the equations
     tspan = [0 t_end];
-    
+    %tspan = 0:1/400/4:t_end;
     y0 = initial_cond(h,r_min,r_max);
-    options = odeset('RelTol',1e-12,'AbsTol',1e-12);
-    [t,y] = ode45(@(t,y) dydt(t,y,h,N),tspan,y0, options);
+    y0=reshape(y0, [], 1);
+    %options = odeset('RelTol',1e-12,'AbsTol',1e-12);
+    [t,y] = ode45(@(t,y) dydt(t,y,h,N),tspan,y0);
 
     %getting the output size
     [t_size,y_size] = size(y);
@@ -156,16 +164,28 @@ function U=dydt(t, v_old, h, N)
     U = zeros(n_var*N,1);
     % unpacking our previous state
     v_old=reshape(v_old,[],n_var);
-    r=(r_min+h/2:h:r_max-h/2);
-    [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, H, M_r, G] = unpackage(v_old);
+    r=(r_min+h:h:r_max);
+    
+    alpha = v_old(:,1);
+    beta_r = v_old(:,2);
+    B_r = v_old(:,3);
+    chi=v_old(:,4);
+    g_rr=v_old(:,5);
+    g_thth=v_old(:,6);
+    A_rr=v_old(:,7);
+    K=v_old(:,8);
+    Gamma_r=v_old(:,9);
+    H=v_old(:,10);
+    M_r=v_old(:,11);
+    G=v_old(:,12);
 
     
     % radial derivatives
     
     % precollapsed alpha or unity
     if precollapse == 1
-        alpha_p = f_prime(alpha,h,alpha(2),alpha(1),power(1+0.5/(r_max+h/2),-2),power(1+1/2/(r_max+3*h/2),-2),N);
-        alpha_pp = f_pprime(alpha,h,alpha(2),alpha(1),power(1+0.5/(r_max+h/2),-2),power(1+1/2/(r_max+3*h/2),-2),N);
+        alpha_p = f_prime(alpha,h,alpha(2),alpha(1),power(1+0.5/(r_max+h),-2),power(1+1/2/(r_max+2*h),-2),N);
+        alpha_pp = f_pprime(alpha,h,alpha(2),alpha(1),power(1+0.5/(r_max+h),-2),power(1+1/2/(r_max+2*h),-2),N);
     else
         alpha_p = f_prime(alpha,h,alpha(2),alpha(1),1,1,N);
         alpha_pp = f_pprime(alpha,h,alpha(2),alpha(1),1,1,N);
@@ -179,22 +199,22 @@ function U=dydt(t, v_old, h, N)
         chi_p = f_prime(chi,h,chi(2),chi(1),1,1,N);
         chi_pp = f_pprime(chi,h,chi(2),chi(1),1,1,N);
     else
-        chi_p = f_prime(chi,h,chi(2),chi(1),power(1 + 1/2/(r_max+h/2), -4),power(1 + 1/2/(r_max+3*h/2), -4),N);
-        chi_pp = f_pprime(chi,h,chi(2),chi(1),power(1 + 1/2/(r_max+h/2), -4),power(1 + 1/2/(r_max+3*h/2),-4),N);
+        chi_p = f_prime(chi,h,chi(2),chi(1),power(1 + 1/2/(r_max+h), -4),power(1 + 1/2/(r_max+2*h), -4),N);
+        chi_pp = f_pprime(chi,h,chi(2),chi(1),power(1 + 1/2/(r_max+h), -4),power(1 + 1/2/(r_max+2*h),-4),N);
     end
     g_rr_p = f_prime(g_rr,h,g_rr(2),g_rr(1),1,1,N);
     g_rr_pp = f_pprime(g_rr,h,g_rr(2),g_rr(1),1,1,N);
-    g_thth_p = f_prime(g_thth,h,g_thth(2), g_thth(1), (r_max+h/2)^2,(r_max+3*h/2)^2,N);
-    g_thth_pp = f_pprime(g_thth,h,g_thth(2), g_thth(1),(r_max+h/2)^2,(r_max+3*h/2)^2,N);
+    g_thth_p = f_prime(g_thth,h,g_thth(2), g_thth(1), (r_max+h)^2,(r_max+2*h)^2,N);
+    g_thth_pp = f_pprime(g_thth,h,g_thth(2), g_thth(1),(r_max+h)^2,(r_max+2*h)^2,N);
     A_rr_p =  f_prime(A_rr,h,A_rr(2),A_rr(1),0,0,N);
     K_p = f_prime(K,h,K(2),K(1),0,0,N);
-    Gamma_r_p = f_prime(Gamma_r,h,-Gamma_r(2),-Gamma_r(1),-2/(r_max+h/2),-2/(r_max+3*h/2),N);
+    Gamma_r_p = f_prime(Gamma_r,h,-Gamma_r(2),-Gamma_r(1),-2/(r_max+h),-2/(r_max+2*h),N);
     % The initial conditions below are what we used before for r_min = 1.
     % at r_min = 0 some stuff go wrong
     if r_min ~= 0
-        g_thth_p = f_prime(g_thth,h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
-        g_thth_pp = f_pprime(g_thth,h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
-        Gamma_r_p = f_prime(Gamma_r,h,-2/(r_min-3*h/2),-2/(r_min-h/2),-2/(r_max+h/2),-2/(r_max+3*h/2) ,N);
+        g_thth_p = f_prime(g_thth,h,(r_min-2*h)^2,(r_min-h)^2,(r_max+h)^2,(r_max+2*h)^2,N);
+        g_thth_pp = f_pprime(g_thth,h,(r_min-2*h)^2,(r_min-h)^2,(r_max+h)^2,(r_max+2*h)^2,N);
+        Gamma_r_p = f_prime(Gamma_r,h,-2/(r_min-2*h),-2/(r_min-h),-2/(r_max+h),-2/(r_max+2*h) ,N);
     end
 
 
@@ -212,7 +232,7 @@ function U=dydt(t, v_old, h, N)
     else
         alpha_t = beta_r.*alpha_p-2*alpha.*K...
                   +diss_on*KreissOliger(alpha,sigma,h,alpha(3),alpha(2),alpha(1),...
-                  power(1+1/2./(r_max+h/2),-2),power(1+1/2/(r_max+3*h/2),-2),power(1+1/2/(r_max+5*h/2),-2),N); % eqn 1
+                  power(1+1/2./(r_max+h),-2),power(1+1/2/(r_max+2*h),-2),power(1+1/2/(r_max+3*h),-2),N); % eqn 1
     end
     beta_r_t = 3/4*B_r+beta_r.*beta_r_p...
                +diss_on*KreissOliger(beta_r,sigma,h,-beta_r(3),-beta_r(2),-beta_r(1),0,0,0,N); % note this is only 2a), what is B_r?
@@ -220,7 +240,7 @@ function U=dydt(t, v_old, h, N)
             -2*v.*beta_r.*g_thth_p.*chi./(3*g_thth)-2/3*v.*beta_r_p.*chi...
             +beta_r.*chi_p...
             +diss_on*KreissOliger(chi,sigma,h,chi(3),chi(2),chi(1),...
-            power(1 + 1/2/(r_max+h/2), -4),power(1 + 1/2/(r_max+3*h/2), -4),power(1 + 1/2/(r_max+5*h/2), -4),N);
+            power(1 + 1/2/(r_max+h), -4),power(1 + 1/2/(r_max+2*h), -4),power(1 + 1/2/(r_max+3*h), -4),N);
     g_rr_t = -2*A_rr.*alpha-v.*beta_r.*g_rr_p./3+beta_r.*g_rr_p...
              -2*g_rr.*v.*beta_r.*g_thth_p./(3*g_thth)+2*g_rr.*beta_r_p...
              -2/3*g_rr.*v.*beta_r_p...
@@ -228,7 +248,7 @@ function U=dydt(t, v_old, h, N)
     g_thth_t = A_rr.*g_thth.*alpha./g_rr-g_thth.*v.*beta_r.*g_rr_p./(3*g_rr)...
                -2/3*v.*beta_r.*g_thth_p+beta_r.*g_thth_p...
                -2/3*g_thth.*v.*beta_r_p...
-               +diss_on*KreissOliger(g_thth,sigma,h,g_thth(3),g_thth(2),g_thth(1),(r_max+h/2)^2,(r_max+3*h/2)^2,(r_max+5*h/2)^2,N);
+               +diss_on*KreissOliger(g_thth,sigma,h,g_thth(3),g_thth(2),g_thth(1),(r_max+h)^2,(r_max+2*h)^2,(r_max+3*h)^2,N);
     A_rr_t = -2*alpha.*A_rr.^2./g_rr+K.*alpha.*A_rr-v.*beta_r.*g_rr_p.*A_rr./(3*g_rr)...
              -2*v.*beta_r.*g_thth_p.*A_rr./(3*g_thth)-2/3*v.*beta_r_p.*A_rr...
              +2*beta_r_p.*A_rr+2*alpha.*chi.*g_rr_p.^2./(3*g_rr.^2)... % end of first line
@@ -253,7 +273,7 @@ function U=dydt(t, v_old, h, N)
                -3*A_rr.*alpha.*chi_p./(g_rr.^2.*chi)+v.*beta_r.*g_rr_pp./(6*g_rr.^2)...
                +v.*beta_r.*g_thth_pp./(3*g_rr.*g_thth)+v.*beta_r_pp./(3*g_rr)...
                +beta_r_pp./g_rr...
-               +diss_on*KreissOliger(Gamma_r,sigma,h,-Gamma_r(3),-Gamma_r(2),-Gamma_r(1),-2/(r_max+h/2),-2/(r_max+3*h/2),-2/(r_max+5*h/2),N);
+               +diss_on*KreissOliger(Gamma_r,sigma,h,-Gamma_r(3),-Gamma_r(2),-Gamma_r(1),-2/(r_max+h),-2/(r_max+2*h),-2/(r_max+3*h),N);
     % This has to be here since it uses Gamma_r_t
     B_r_t = Gamma_r_t- eta.*B_r+beta_r.*B_r_p - beta_r.*Gamma_r_p ...
            +diss_on*KreissOliger(K,sigma,h,-B_r(3),-B_r(2),-B_r(1),0,0,0,N);
@@ -314,7 +334,7 @@ function v_old=initial_cond(h,r_min,r_max)
     global precollapse
     M =1;
     N=round((r_max-r_min)/h);
-    r=(r_min+h/2:h:r_max-h/2);
+    r=(r_min+h:h:r_max);
     v_old=zeros(N,n_var);
     % flat initial conditions
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -352,8 +372,8 @@ function v_old=initial_cond(h,r_min,r_max)
         alpha_p = f_prime(alpha,h,1,1,1,1,N);
         alpha_pp = f_pprime(alpha,h,1,1,1,1,N);
     else
-        alpha_p = f_prime(alpha,h,0,0,power(1+M/2./(r_max+h/2),-2),power(1+M/2./(r_max+h/2),-2),N);
-        alpha_pp = f_pprime(alpha,h,power(1+M/2./(r_max+h/2),-2),power(1+M/2./(r_max+h/2),-2),1,1,N);
+        alpha_p = f_prime(alpha,h,power(1+M/2./(r_min-2*h),-2),power(1+M/2./(r_min-h),-2),power(1+M/2./(r_max+h),-2),power(1+M/2./(r_max+2*h),-2),N);
+        alpha_pp = f_pprime(alpha,h,power(1+M/2./(r_min-2*h),-2),power(1+M/2./(r_min-h),-2),power(1+M/2./(r_max+h),-2),power(1+M/2./(r_max+2*h),-2),N);
     end
     beta_r_p = f_prime(beta_r,h,0,0,0,0,N);
     beta_r_pp = f_pprime(beta_r,h,0,0,0,0,N);
@@ -362,11 +382,11 @@ function v_old=initial_cond(h,r_min,r_max)
     chi_pp = f_pprime(chi,h,1,1,1,1,N);
     g_rr_p = f_prime(g_rr,h,1,1,1,1,N);
     g_rr_pp = f_pprime(g_rr,h,1,1,1,1,N);
-    g_thth_p = f_prime(g_thth,h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
-    g_thth_pp = f_pprime(g_thth,h,(r_min-3*h/2)^2,(r_min-h/2)^2,(r_max+h/2)^2,(r_max+3*h/2)^2,N);
+    g_thth_p = f_prime(g_thth,h,(r_min-2*h)^2,(r_min-h)^2,(r_max+h)^2,(r_max+2*h)^2,N);
+    g_thth_pp = f_pprime(g_thth,h,(r_min-2*h)^2,(r_min-h)^2,(r_max+h)^2,(r_max+2*h)^2,N);
     A_rr_p =  f_prime(A_rr,h,0,0,0,0,N);
     K_p = f_prime(K,h,0,0,0,0,N);
-    Gamma_r_p = f_prime(Gamma_r,h, -2/(r_min-3*h/2), -2/(r_min-h/2),-2/(r_max+h/2),-2/(r_max+3*h/2),N);
+    Gamma_r_p = f_prime(Gamma_r,h, -2/(r_min-2*h), -2/(r_min-h),-2/(r_max+h),-2/(r_max+2*h),N);
     
     % Building constraints
     H = -3/2*A_rr.*A_rr./g_rr./g_rr + 2/3.*K.*K - 5/2.*chi_p.*chi_p./chi./g_rr...
@@ -416,18 +436,7 @@ end
 % this function unpackages the *compressed* state vector v
 % N is the length of the grid
 function [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, H, M_r, G]=unpackage(v)
-    alpha = v(:,1);
-    beta_r = v(:,2);
-    B_r = v(:,3);
-    chi=v(:,4);
-    g_rr=v(:,5);
-    g_thth=v(:,6);
-    A_rr=v(:,7);
-    K=v(:,8);
-    Gamma_r=v(:,9);
-    H=v(:,10);
-    M_r=v(:,11);
-    G=v(:,12);
+    
 end
 
 % This function returns f'(x) where f is one of the state variables
