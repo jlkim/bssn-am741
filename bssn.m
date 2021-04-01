@@ -481,27 +481,20 @@ function v=KreissOliger(f,sigma,h,a,b,c,x,y,z,N)
     v(4:N-3) = prefactor*(f(7:N)-6*f(6:N-1)+15*f(5:N-2)-20*f(4:N-3)...
         +15*f(3:N-4)-6*f(2:N-5)+f(1:N-6))./h^6;
 end
-
 % Horizon and expansion 
 function [hum,Theta] = Hor(g_rr,g_thth,K,A_rr,chi,N,r,h)
     global r_max
     hum=0.;
     j=1;
     chi_inv = 1./chi;
+    G = sqrt(chi_inv.*g_rr);
     g_thth_p = f_prime(g_thth,h,g_thth(2), g_thth(1),(r_max+h/2)^2,(r_max+3*h/2)^2,N);
-    % reconstruct thth-entry of full extrinsic curvature
-    if j==0
-        % without dividing by g_thth prior to Theta 
-        K_thth = chi_inv.*(-A_rr.*g_thth./g_rr + 1/3.*g_thth.*K);
-          % Leo: is it safe to invert g_rr/g_thth and take sqrt of it?
-        % expansion Theta (Eq. (3.3) in the apparent horizon finding paper)
-        Theta = g_thth_p./g_thth./sqrt(g_rr)-2.*K_thth./g_thth;
-    else
-        % dividing g_thth prior to Theta
-        K_thth = chi_inv.*(-A_rr./g_rr + 1/3.*K);
-        % expansion Theta (Eq. (3.3) in the apparent horizon finding paper)
-        Theta = g_thth_p./g_thth./sqrt(g_rr)-2.*K_thth;
-    end
+    chi_p = f_prime(chi,h,chi(2),chi(1),power(1 + 1/2/(r_max+h/2), -4),power(1 + 1/2/(r_max+3*h/2), -4),N);
+
+    % reconstruct thth-entry of full extrinsic curvature/g_thth
+    K_thth = -A_rr./2./g_rr + 1/3.*K;
+    % expansion Theta (Eq. (3.3) in the apparent horizon finding paper)
+    Theta = -chi_p.*chi_inv./G + g_thth_p./g_thth./G - 2.*K_thth;
     
     % Simple root-finder for horizon
     % threshold "0" up to machine precision
