@@ -22,7 +22,7 @@ function bssn
     r=(r_min+h:h:r_max);
 
     
-    t_end = 0.5;
+    t_end = 2;
     %plot_RHS(20,r_min,r_max)
     [U_coarse, t_size_coarse]=state_result(1/50, t_end);
     [U_med, t_size_med]=state_result(1/100, t_end);
@@ -36,14 +36,10 @@ function bssn
     A_rr_fine, K_fine, Gamma_r_fine, H_fine, M_r_fine, G_fine]=var_t(U_fine) ;
     [alpha_finest, beta_r_finest, B_r_finest, chi_finest, g_rr_finest, g_thth_finest,...
     A_rr_finest, K_finest, Gamma_r_finest, H_finest, M_r_finest, G_finest]=var_t(U_finest) ;
-    
-    size(chi_finest)
-%      error_medcoarse = error(chi_med(1:2:2*N, 1), chi_coarse(:, 1));
-%      error_finemed = 2*error(chi_fine(1:4:N*4, 1),chi_med(1:2:2*N, 1));
-%      error_finestfine = 4*error(chi_finest(1:8:N*8, 1),chi_fine(1:4:4*N, 1));
-     error_medcoarse = error(chi_med(2:2:2*N, t_size_med), chi_coarse(:, t_size_coarse));
-     error_finemed = 16*error(chi_fine(4:4:N*4, t_size_fine),chi_med(2:2:2*N, t_size_med));
-     error_finestfine = 16^2*error(chi_finest(8:8:N*8, t_size_finest),chi_fine(4:4:4*N, t_size_fine));
+
+    error_medcoarse = error(beta_r_med(2:2:2*N, t_size_med), beta_r_coarse(:, t_size_coarse));
+    error_finemed = 16*error(beta_r_fine(4:4:N*4, t_size_fine),beta_r_med(2:2:2*N, t_size_med));
+    error_finestfine = 16^2*error(beta_r_finest(8:8:N*8, t_size_finest),beta_r_fine(4:4:4*N, t_size_fine));
     size(r)
     size(error_medcoarse)
     plot(r.', error_medcoarse, '-r');
@@ -51,12 +47,12 @@ function bssn
     plot(r.', error_finemed, 'b--');
     plot(r.', error_finestfine, 'g-.');
     xlabel('$r/M$','Interpreter','latex');
-    ylabel('$\Delta \chi$','Interpreter','latex') ;
-    title('$\Delta \chi$ at $t = 0.5M$', 'Interpreter', 'latex');
-    l=legend('$(\chi_{M/50}-\chi_{M/100})$', '$16(\chi_{M/100}-\chi_{M/200})$', '$256(\chi_{M/200}-\chi_{M/400})$');
+    ylabel('$\Delta \beta^r$','Interpreter','latex') ;
+    title('$\Delta \beta^r$ at $t = 0.5M$', 'Interpreter', 'latex');
+    l=legend('$(\beta^r_{M/50}-\beta^r_{M/100})$', '$16(\beta^r_{M/100}-\beta^r_{M/200})$', '$256(\beta^r_{M/200}-\beta^r_{M/400})$');
     set(l, 'Interpreter', 'latex');
     set(l, 'FontSize', 14);
-    xlim([0,4])
+    xlim([0,2])
     %plotting
 %     plot(r,chi_coarse(:, t_size_coarse), 'r')
 %     hold on
@@ -138,10 +134,8 @@ function [U, t_size]=state_result(h, t_end)
     % time at which we want to end the simulation
     % time to solve the equations
     tspan = [0 t_end];
-    %tspan = 0:1/400/4:t_end;
     y0 = initial_cond(h,r_min,r_max);
     y0=reshape(y0, [], 1);
-    %options = odeset('RelTol',1e-12,'AbsTol',1e-12);
     [t,y] = ode45(@(t,y) dydt(t,y,h,N),tspan,y0);
 
     %getting the output size
