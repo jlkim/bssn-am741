@@ -91,26 +91,44 @@ function bssn
 % 
 % Horizon computation
 
-
-% [horsize_r,horsize_t] = size(var_t(U));
-% hor=zeros(horsize_t,1);
-% time=zeros(horsize_t,1);
-% Theta=zeros(horsize_r,horsize_t);
-%         % Horizon
-%     for iter=1:horsize_t
-%         time(iter) = t_end/horsize_t*iter;
-%         [hor(iter),Theta(:,iter)] = Hor(g_rr(:,iter),g_thth(:,iter),K(:,iter),A_rr(:,iter),chi(:,iter),N,r,h);
-% %  
-% %         plot(r,Theta(:,iter))
-% %         xlabel('r')
-% %         ylabel('Expansion')
-% %         pause(0.001)
-%      end
-% 
-% %      figure(2)
-%      plot(time,hor)
-%      xlabel('t')
-%      ylabel('Horizon')   
+[horsize_r,horsize_t] = size(var_t(U));
+hor=zeros(horsize_t,1);
+time=zeros(horsize_t,1);
+Theta=zeros(horsize_r,horsize_t);
+bhMass=zeros(horsize_t);
+        % Horizon
+    for iter=1:horsize_t
+        time(iter) = t_end/horsize_t*iter;
+        [j,hor(iter),Theta(:,iter)] = Hor(g_rr(:,iter),g_thth(:,iter),K(:,iter),A_rr(:,iter),chi(:,iter),N,r,h);
+        bhMass(iter)=sqrt(g_thth(j+1,iter))./2;
+    end
+    
+%     ss=floor(horsize_t/4);
+%     figure(1)
+%         plot(r,Theta(:,ss))
+%         hold on
+%         plot(r,Theta(:,2*ss))
+%         plot(r,Theta(:,3*ss))
+%         plot(r,Theta(:,4*ss))
+%         axis([0. r_max-2.*h -0.8 .8])
+%         xlabel('r')
+%         ylabel('\Theta')
+%         title('Time evolution of Expansion Parameter \Theta')
+%         legend("t = " + time(ss), "t = " + time(2*ss),"t = " + time(3*ss),"t = " + time(4*ss))
+%         hold off
+%         pause(0.001)
+    
+    figure(2)
+    plot(time,hor)
+    xlabel('t')
+    ylabel('r_{hor}')
+    title('Horizon evolution r_{hor} vs. t')
+    
+    figure(3)
+    plot(time,bhMass)
+    xlabel('t')
+    ylabel('Blackhole Mass')
+    title('Blackhole Mass M_\circ vs. t')
      
       
 % 
@@ -481,8 +499,9 @@ function v=KreissOliger(f,sigma,h,a,b,c,x,y,z,N)
     v(4:N-3) = prefactor*(f(7:N)-6*f(6:N-1)+15*f(5:N-2)-20*f(4:N-3)...
         +15*f(3:N-4)-6*f(2:N-5)+f(1:N-6))./h^6;
 end
+
 % Horizon and expansion 
-function [hum,Theta] = Hor(g_rr,g_thth,K,A_rr,chi,N,r,h)
+function [j,hum,Theta] = Hor(g_rr,g_thth,K,A_rr,chi,N,r,h)
     global r_max
     hum=0.;
     j=1;
@@ -499,18 +518,19 @@ function [hum,Theta] = Hor(g_rr,g_thth,K,A_rr,chi,N,r,h)
     % Simple root-finder for horizon
     % threshold "0" up to machine precision
     hold = 1.e-15;
-    % Detecting local minimum of Theta
-    j=1;
-    for i=1:size(Theta)
-        if Theta(i) == min(Theta);
-            j=i;
-        end
-    end
+%     % Detecting local minimum of Theta
+%     j=1;
+%     for i=1:size(Theta)
+%         if Theta(i) == min(Theta);
+%             j=i;
+%         end
+%     end
     % Root search to the right of local minimum
-    for i=j:size(Theta)-1
+    for i=j+1:size(Theta)-1
         s = Theta(i)*Theta(i+1);
         % negative successive multiples => Theta crosses 0 at index i
         if s < hold
+            j=i;
             % average between radii i and i+1
             hum = 1/2*(r(i)+r(i+1));
             % terminate loop
