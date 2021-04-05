@@ -1,4 +1,5 @@
 function bssn
+    set(0, 'DefaultLineLineWidth', 1.2);
     global v
     global n_var
     global r_min
@@ -11,20 +12,20 @@ function bssn
     v = 1; % Eulerian condition (v=0) or Lagrangian condition (v=1)
     eta = 1; % eta parameter in the Gamma-driver condition
     n_var = 9; % number of functions to evolve
-    r_min = 0;
-    r_max = 8;
+    r_min = 1;
+    r_max = 10;
     diss_on = 0; % dissipation (Kreiss-Oliger) on (=1) or off (=0)
     sigma = 0.1;
-    puncture = 1;
-    precollapse = 1;
+    puncture = 0;
+    precollapse = 0;
     h = 1/50; % spatial grid
     N=round((r_max-r_min)/h);
     r=(r_min+h:h:r_max);
 
     
-    t_end = 2;
-    %plot_RHS(20,r_min,r_max)
-    param_conv(h,t_end)
+    t_end = 0.5;
+    plot_RHS(20)
+    %param_conv(h,t_end)
     
     %plotting
 %     plot(r,chi_coarse(:, t_size_coarse), 'r')
@@ -165,8 +166,8 @@ function U=dydt(t, v_old, h, N)
     
     % precollapsed alpha or unity
     if precollapse == 1
-        alpha_p = f_prime(alpha,h,alpha(2),alpha(1),power(1+0.5/(r_max+h),-2),power(1+1/2/(r_max+2*h),-2),N);
-        alpha_pp = f_pprime(alpha,h,alpha(2),alpha(1),power(1+0.5/(r_max+h),-2),power(1+1/2/(r_max+2*h),-2),N);
+        alpha_p = f_prime(alpha,h,alpha(2),alpha(1),power(1+0.5/(r_max+h),-2),power(1+0.5/(r_max+2*h),-2),N);
+        alpha_pp = f_pprime(alpha,h,alpha(2),alpha(1),power(1+0.5/(r_max+h),-2),power(1+0.5/(r_max+2*h),-2),N);
     else
         alpha_p = f_prime(alpha,h,alpha(2),alpha(1),1,1,N);
         alpha_pp = f_pprime(alpha,h,alpha(2),alpha(1),1,1,N);
@@ -193,9 +194,9 @@ function U=dydt(t, v_old, h, N)
     % The initial conditions below are what we used before for r_min = 1.
     % at r_min = 0 some stuff go wrong
     if r_min ~= 0
-        g_thth_p = f_prime(g_thth,h,(r_min-2*h)^2,(r_min-h)^2,(r_max+h)^2,(r_max+2*h)^2,N);
-        g_thth_pp = f_pprime(g_thth,h,(r_min-2*h)^2,(r_min-h)^2,(r_max+h)^2,(r_max+2*h)^2,N);
-        Gamma_r_p = f_prime(Gamma_r,h,-2/(r_min-2*h),-2/(r_min-h),-2/(r_max+h),-2/(r_max+2*h) ,N);
+        g_thth_p = f_prime(g_thth,h,(r_min-h)^2,(r_min)^2,(r_max+h)^2,(r_max+2*h)^2,N);
+        g_thth_pp = f_pprime(g_thth,h,(r_min-h)^2,(r_min)^2,(r_max+h)^2,(r_max+2*h)^2,N);
+        Gamma_r_p = f_prime(Gamma_r,h,-2/(r_min-h),-2/(r_min),-2/(r_max+h),-2/(r_max+2*h) ,N);
     end
 
     % time derivatives for each state variable
@@ -309,7 +310,7 @@ function v_old=initial_cond(h,r_min,r_max)
     % parameter s determines whether we use cap for chi or inv_r
     s = 0;
     if precollapse == 1
-        alpha = power(1+M/2./(r.'),-2);
+        alpha = power(1+0.5./(r.'),-2);
     end
     
     if puncture == 1
@@ -339,27 +340,6 @@ end
 % this requires the fine grid points to be at the same points
 function y=error(fine, coarse)
     y=coarse-fine;
-end
-
-function plot_RHS(n_iter,r_min,r_max)
-     L=zeros(1,10);
-     H=zeros(1,10);
-     for j=1:n_iter
-         h=0.5^j;
-         N = round((r_max-r_min)/h);
-         v_old = initial_cond(h,r_min,r_max);
-         U = dydt(1, v_old, h, N);
-         U=reshape(U.',[],12);
-         Uj=U(:,7);
-         L(1,j)=sqrt(h)*sqrt(sum((abs(Uj).^2)));%sqrt(mean((Uj).^2));
-         H(1,j)=h;
-     end
-     %plot loglog plot
-     loglog(H,L)
-     xlabel('h')
-     ylabel('RHS')
-     %plot slope of loglog plot    
-     %plot(log10(H(1,1:19)),(log10(L(1,2:20)) - log10(L(1,1:19)))./( log10(H(1,2:20)) - log10(H(1,1:19)) ) )
 end
 
 % This function returns f'(x) where f is one of the state variables
@@ -509,8 +489,41 @@ function [j,hum,Theta] = Hor(g_rr,g_thth,K,A_rr,chi,N,r,h)
     end
 end
 
+function plot_RHS(n_iter)
+    global r_min
+    global r_max
+    global n_var
+
+    L=zeros(1,10);
+    H=zeros(1,10);
+    for j=1:n_iter
+        h=0.5^j;
+        N = round((r_max-r_min)/h);
+        v_old = initial_cond(h,r_min,r_max);
+        U = dydt(1, v_old, h, N);
+        U=reshape(U.',[],n_var);
+        %Uj=U(:,7);
+        L(1,j)=sqrt(h)*sqrt(sum((abs(U).^2), 'all'));
+        H(1,j)=h;
+    end
+    %plot loglog plot
+    t = tiledlayout(1,2,'TileSpacing','Compact','Padding','Compact');
+    nexttile %%%%% loglog plot
+    loglog(H,L, 'bo-')
+    ylabel('$\Vert$RHS$\Vert_2$','Interpreter','latex','FontSize', 14)
+     
+    nexttile %%%%% slope of loglog plot
+    semilogx(H(1,1:19),(log10(L(1,2:20)) - log10(L(1,1:19)))./( log10(H(1,2:20)) - log10(H(1,1:19)) ), 'ro-' )
+    ylabel('Slope','Interpreter','latex','FontSize', 14)
+     
+    % Requires R2020a or later
+    xlabel(t, '$h/M$','Interpreter','latex','FontSize', 14)
+    set(gcf,'position',[10,10,900,400])
+    exportgraphics(t,'RHS_conv.png','BackgroundColor','none','Resolution',300)
+end
+
 function param_conv(h,t_end)
-    set(0, 'DefaultLineLineWidth', 1.4);
+    set(0, 'DefaultLineLineWidth', 1.2);
     global r_min
     global r_max
     N=round((r_max-r_min)/h);
@@ -542,7 +555,6 @@ function param_conv(h,t_end)
     chi_error_finestfine = 16^2*error(chi_finest(8:8:N*8, t_size_finest),chi_fine(4:4:4*N, t_size_fine));
 
     % Requires R2019b or later
-    title('$\Delta \alpha$ at $t = 0.5M$', 'Interpreter', 'latex');
     t = tiledlayout(1,2,'TileSpacing','Compact','Padding','Compact');
     nexttile %%%%% alpha plot
     plot(r.', alpha_error_medcoarse, '-r');
@@ -550,11 +562,11 @@ function param_conv(h,t_end)
     plot(r.', alpha_error_finemed, 'b--');
     plot(r.', alpha_error_finestfine, 'g-.');
     hold off
-    ylabel('$\Delta \alpha$','Interpreter','latex','FontSize', 16)
+    ylabel('$\Delta \alpha$','Interpreter','latex','FontSize', 14)
     xlim([0,2.5])
     l=legend('$(\alpha_{M/50}-\alpha_{M/100})$', '$16(\alpha_{M/100}-\alpha_{M/200})$', '$256(\alpha_{M/200}-\alpha_{M/400})$');
-    set(l, 'Interpreter', 'latex','FontSize', 16)
-    set(l, 'FontSize', 16);
+    set(l, 'Interpreter', 'latex','FontSize', 14)
+    set(l, 'FontSize', 14);
     
 %     nexttile %%%%% beta_r plot
 %     plot(r.', beta_r_error_medcoarse, '-r');
@@ -575,16 +587,16 @@ function param_conv(h,t_end)
     plot(r.', chi_error_finemed, 'b--');
     plot(r.', chi_error_finestfine, 'g-.');
     hold off
-    ylabel('$\Delta \chi$','Interpreter','latex','FontSize', 16)
+    ylabel('$\Delta \chi$','Interpreter','latex','FontSize', 14)
     l=legend('$(\chi_{M/50}-\chi_{M/100})$', '$16(\chi_{M/100}-\chi_{M/200})$', '$256(\chi_{M/200}-\chi_{M/400})$');
     xlim([0,2.5])
-    set(l, 'FontSize', 16);
+    set(l, 'FontSize', 14);
     set(l, 'Interpreter', 'latex');
     
     %title(t,'Convergence plots at $t = 0.5$', 'Interpreter', 'latex', 'FontSize', 18)
-    xlabel(t,'$r/M$', 'Interpreter', 'latex','FontSize', 16)
+    xlabel(t,'$r/M$', 'Interpreter', 'latex','FontSize', 14)
     
     % Requires R2020a or later
     set(gcf,'position',[10,10,900,400])
-    exportgraphics(t,'alpha_chi_conv_t2.png','BackgroundColor','none','Resolution',300)
+    exportgraphics(t,'alpha_chi_conv_t05.png','BackgroundColor','none','Resolution',300)
 end
