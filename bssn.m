@@ -10,7 +10,7 @@ function bssn
     global precollapse
     v = 1; % Eulerian condition (v=0) or Lagrangian condition (v=1)
     eta = 1; % eta parameter in the Gamma-driver condition
-    n_var = 12; % number of functions to evolve
+    n_var = 9; % number of functions to evolve
     r_min = 0;
     r_max = 8;
     diss_on = 0; % dissipation (Kreiss-Oliger) on (=1) or off (=0)
@@ -24,35 +24,8 @@ function bssn
     
     t_end = 2;
     %plot_RHS(20,r_min,r_max)
-    [U_coarse, t_size_coarse]=state_result(1/50, t_end);
-    [U_med, t_size_med]=state_result(1/100, t_end);
-    [U_fine, t_size_fine]=state_result(1/200, t_end);
-    [U_finest, t_size_finest]=state_result(1/400, t_end);     
-    [alpha_coarse, beta_r_coarse, B_r_coarse, chi_coarse, g_rr_coarse,...
-    g_thth_coarse, A_rr_coarse, K_coarse, Gamma_r_coarse, H_coarse, M_r_coarse, G_coarse]=var_t(U_coarse);
-    [alpha_med, beta_r_med, B_r_med, chi_med, g_rr_med, g_thth_med,...
-    A_rr_med, K_med, Gamma_r_med, H_med, M_r_med, G_med]=var_t(U_med);
-    [alpha_fine, beta_r_fine, B_r_fine, chi_fine, g_rr_fine, g_thth_fine,...
-    A_rr_fine, K_fine, Gamma_r_fine, H_fine, M_r_fine, G_fine]=var_t(U_fine) ;
-    [alpha_finest, beta_r_finest, B_r_finest, chi_finest, g_rr_finest, g_thth_finest,...
-    A_rr_finest, K_finest, Gamma_r_finest, H_finest, M_r_finest, G_finest]=var_t(U_finest) ;
-
-    error_medcoarse = error(beta_r_med(2:2:2*N, t_size_med), beta_r_coarse(:, t_size_coarse));
-    error_finemed = 16*error(beta_r_fine(4:4:N*4, t_size_fine),beta_r_med(2:2:2*N, t_size_med));
-    error_finestfine = 16^2*error(beta_r_finest(8:8:N*8, t_size_finest),beta_r_fine(4:4:4*N, t_size_fine));
-    size(r)
-    size(error_medcoarse)
-    plot(r.', error_medcoarse, '-r');
-    hold on
-    plot(r.', error_finemed, 'b--');
-    plot(r.', error_finestfine, 'g-.');
-    xlabel('$r/M$','Interpreter','latex');
-    ylabel('$\Delta \beta^r$','Interpreter','latex') ;
-    title('$\Delta \beta^r$ at $t = 0.5M$', 'Interpreter', 'latex');
-    l=legend('$(\beta^r_{M/50}-\beta^r_{M/100})$', '$16(\beta^r_{M/100}-\beta^r_{M/200})$', '$256(\beta^r_{M/200}-\beta^r_{M/400})$');
-    set(l, 'Interpreter', 'latex');
-    set(l, 'FontSize', 14);
-    xlim([0,2])
+    param_conv(h,t_end)
+    
     %plotting
 %     plot(r,chi_coarse(:, t_size_coarse), 'r')
 %     hold on
@@ -74,7 +47,7 @@ function bssn
 %      % reshaping the array so it's nicer to unpackage
 %      U = reshape(y, t_size, [], n_var);
 %      % unpackaging into var(time, space)
-%      [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, H, M_r, G] = var_t(U);
+%      [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r] = var_t(U);
     
     
 
@@ -187,10 +160,6 @@ function U=dydt(t, v_old, h, N)
     A_rr=v_old(:,7);
     K=v_old(:,8);
     Gamma_r=v_old(:,9);
-    H=v_old(:,10);
-    M_r=v_old(:,11);
-    G=v_old(:,12);
-
     
     % radial derivatives
     
@@ -228,14 +197,6 @@ function U=dydt(t, v_old, h, N)
         g_thth_pp = f_pprime(g_thth,h,(r_min-2*h)^2,(r_min-h)^2,(r_max+h)^2,(r_max+2*h)^2,N);
         Gamma_r_p = f_prime(Gamma_r,h,-2/(r_min-2*h),-2/(r_min-h),-2/(r_max+h),-2/(r_max+2*h) ,N);
     end
-
-
-    % constraint evolution equations
-    H_p = f_prime(H,h,H(2),H(1),0,0,N);
-    M_r_p = f_prime(M_r,h,M_r(2),M_r(1),0,0,N);
-    M_r_pp = f_pprime(M_r,h,M_r(2),M_r(1),0,0,N);
-    G_p = f_prime(G,h,G(2),G(1),0,0,N);
-    G_pp = f_pprime(G,h,G(2),G(1),0,0,N);
 
     % time derivatives for each state variable
     if precollapse == 0
@@ -291,25 +252,12 @@ function U=dydt(t, v_old, h, N)
            +diss_on*KreissOliger(K,sigma,h,-B_r(3),-B_r(2),-B_r(1),0,0,0,N);
     % This is from 2b). Not sure what the parameter \eta should be but I've set it to 0 for now
 
-    % Constraint evolution system
-    H_t = beta_r.*H + 2/3.*alpha.*K.*H-2.*alpha.*A_rr.*chi./g_rr.*G_p-2.*alpha./g_rr.*chi.*M_r_p...
-        + (alpha.*chi_p./g_rr+alpha.*chi.*g_rr_p./g_rr./g_rr-4.*alpha_p.*chi./g_rr...
-        -2.*alpha.*chi.*g_thth_p./g_thth).*M_r;
-    M_r_t = beta_r.*M_r_p + beta_r_p.*M_r - alpha.*K.*M_r - alpha_p./3.*H + alpha./3.*H_p + 2/3.*alpha.*chi.*G_pp...
-        +(2/3.*alpha_p.*chi - alpha.*chi_p./3 + alpha.*chi.*g_thth_p./g_thth).*G_p;
-    G_t = beta_r.*G_p+ 2.*alpha./g_rr.*M_r;
-
-    U = [alpha_t; beta_r_t; B_r_t; chi_t; g_rr_t; g_thth_t; A_rr_t; K_t; Gamma_r_t; H_t; M_r_t; G_t];
+    U = [alpha_t; beta_r_t; B_r_t; chi_t; g_rr_t; g_thth_t; A_rr_t; K_t; Gamma_r_t];
     
 
 end
 
-% this requires the fine grid points to be at the same points
-function y=error(fine, coarse)
-    y=coarse-fine;
-end
-
-function [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, H, M_r, G]=var_t(U)
+function [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r]=var_t(U)
     alpha=U(:,:,1).';
     beta_r=U(:,:,2).';
     B_r = U(:,:,3).';
@@ -319,9 +267,6 @@ function [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, H, M_r, G]=va
 	A_rr=U(:,:,7).';
 	K=U(:,:,8).';
 	Gamma_r=U(:,:,9).';
-    H=U(:,:,10).';
-    M_r=U(:,:,11).';
-    G=U(:,:,12).';
 end
 
 function [charac1, charac2]=CHARAC(chi, g_rr, g_thth, A_rr, K, Gamma_r, h, N)
@@ -378,36 +323,6 @@ function v_old=initial_cond(h,r_min,r_max)
  		%chi = power(1.+M/2.*inv_r(r.',.25,N),-4.);
         end
     end
-    
-    % radial derivatives
-    if precollapse == 0
-        alpha_p = f_prime(alpha,h,1,1,1,1,N);
-        alpha_pp = f_pprime(alpha,h,1,1,1,1,N);
-    else
-        alpha_p = f_prime(alpha,h,power(1+M/2./(r_min-2*h),-2),power(1+M/2./(r_min-h),-2),power(1+M/2./(r_max+h),-2),power(1+M/2./(r_max+2*h),-2),N);
-        alpha_pp = f_pprime(alpha,h,power(1+M/2./(r_min-2*h),-2),power(1+M/2./(r_min-h),-2),power(1+M/2./(r_max+h),-2),power(1+M/2./(r_max+2*h),-2),N);
-    end
-    beta_r_p = f_prime(beta_r,h,0,0,0,0,N);
-    beta_r_pp = f_pprime(beta_r,h,0,0,0,0,N);
-    B_r_p= f_prime(B_r,h,0,0,0,0,N);
-    chi_p = f_prime(chi,h,1,1,1,1,N);
-    chi_pp = f_pprime(chi,h,1,1,1,1,N);
-    g_rr_p = f_prime(g_rr,h,1,1,1,1,N);
-    g_rr_pp = f_pprime(g_rr,h,1,1,1,1,N);
-    g_thth_p = f_prime(g_thth,h,(r_min-2*h)^2,(r_min-h)^2,(r_max+h)^2,(r_max+2*h)^2,N);
-    g_thth_pp = f_pprime(g_thth,h,(r_min-2*h)^2,(r_min-h)^2,(r_max+h)^2,(r_max+2*h)^2,N);
-    A_rr_p =  f_prime(A_rr,h,0,0,0,0,N);
-    K_p = f_prime(K,h,0,0,0,0,N);
-    Gamma_r_p = f_prime(Gamma_r,h, -2/(r_min-2*h), -2/(r_min-h),-2/(r_max+h),-2/(r_max+2*h),N);
-    
-    % Building constraints
-    H = -3/2*A_rr.*A_rr./g_rr./g_rr + 2/3.*K.*K - 5/2.*chi_p.*chi_p./chi./g_rr...
-            +2*chi_pp./g_rr + 2*chi./g_thth-2*chi.*g_thth_pp./g_rr./g_thth...
-            +2*chi_p.*g_thth_p./g_rr./g_thth+chi.*g_rr_p.*g_thth_p./g_rr./g_rr./g_thth...
-            -chi_p.*g_rr_p./g_rr./g_rr+chi.*g_thth_p.*g_thth_p./2./g_rr./g_thth./g_thth;
-    M_r = A_rr_p./g_rr - 2/3.*K_p...
-        - 3/2.*A_rr./g_rr.*(chi_p./chi - g_thth_p./g_thth+ g_rr_p./g_rr);
-    G = -g_rr_p./2./g_rr./g_rr+Gamma_r+g_thth_p./g_thth./g_rr;
         
     % initializing the initial state with ICs
     v_old(:,1) = alpha;
@@ -419,9 +334,11 @@ function v_old=initial_cond(h,r_min,r_max)
     v_old(:,7) = A_rr;
     v_old(:,8) = K;
     v_old(:,9) = Gamma_r;
-    v_old(:,10) = H;
-    v_old(:,11) = M_r;
-    v_old(:,12) = G;
+end
+
+% this requires the fine grid points to be at the same points
+function y=error(fine, coarse)
+    y=coarse-fine;
 end
 
 function plot_RHS(n_iter,r_min,r_max)
@@ -443,12 +360,6 @@ function plot_RHS(n_iter,r_min,r_max)
      ylabel('RHS')
      %plot slope of loglog plot    
      %plot(log10(H(1,1:19)),(log10(L(1,2:20)) - log10(L(1,1:19)))./( log10(H(1,2:20)) - log10(H(1,1:19)) ) )
-end
-
-% this function unpackages the *compressed* state vector v
-% N is the length of the grid
-function [alpha, beta_r, B_r, chi, g_rr, g_thth, A_rr, K, Gamma_r, H, M_r, G]=unpackage(v)
-    
 end
 
 % This function returns f'(x) where f is one of the state variables
@@ -500,6 +411,65 @@ function v=KreissOliger(f,sigma,h,a,b,c,x,y,z,N)
         +15*f(3:N-4)-6*f(2:N-5)+f(1:N-6))./h^6;
 end
 
+% Calculating constraints
+function [H, M_r, G] = constraints(alpha, beta_r, B_r, chi, g_rr,g_thth, A_rr, K, Gamma_r)
+    global n_var
+    global r_min
+    global r_max
+    global v
+    global diss_on
+    global eta
+    global puncture
+    global sigma
+    global precollapse
+    
+    % radial derivatives
+    
+    % precollapsed alpha or unity
+    if precollapse == 1
+        alpha_p = f_prime(alpha,h,alpha(2),alpha(1),power(1+0.5/(r_max+h),-2),power(1+1/2/(r_max+2*h),-2),N);
+        alpha_pp = f_pprime(alpha,h,alpha(2),alpha(1),power(1+0.5/(r_max+h),-2),power(1+1/2/(r_max+2*h),-2),N);
+    else
+        alpha_p = f_prime(alpha,h,alpha(2),alpha(1),1,1,N);
+        alpha_pp = f_pprime(alpha,h,alpha(2),alpha(1),1,1,N);
+    end
+    
+    beta_r_p = f_prime(beta_r,h,-beta_r(2),-beta_r(1),0,0,N);
+    beta_r_pp = f_pprime(beta_r,h,-beta_r(2),-beta_r(1),0,0,N);
+    B_r_p= f_prime(B_r,h,-B_r(2),-B_r(1),0,0,N);
+    % appropriate boundary conditions for flat space
+    if puncture == 0
+        chi_p = f_prime(chi,h,chi(2),chi(1),1,1,N);
+        chi_pp = f_pprime(chi,h,chi(2),chi(1),1,1,N);
+    else
+        chi_p = f_prime(chi,h,chi(2),chi(1),power(1 + 1/2/(r_max+h), -4),power(1 + 1/2/(r_max+2*h), -4),N);
+        chi_pp = f_pprime(chi,h,chi(2),chi(1),power(1 + 1/2/(r_max+h), -4),power(1 + 1/2/(r_max+2*h),-4),N);
+    end
+    g_rr_p = f_prime(g_rr,h,g_rr(2),g_rr(1),1,1,N);
+    g_rr_pp = f_pprime(g_rr,h,g_rr(2),g_rr(1),1,1,N);
+    g_thth_p = f_prime(g_thth,h,g_thth(2), g_thth(1), (r_max+h)^2,(r_max+2*h)^2,N);
+    g_thth_pp = f_pprime(g_thth,h,g_thth(2), g_thth(1),(r_max+h)^2,(r_max+2*h)^2,N);
+    A_rr_p =  f_prime(A_rr,h,A_rr(2),A_rr(1),0,0,N);
+    K_p = f_prime(K,h,K(2),K(1),0,0,N);
+    Gamma_r_p = f_prime(Gamma_r,h,-Gamma_r(2),-Gamma_r(1),-2/(r_max+h),-2/(r_max+2*h),N);
+    % The initial conditions below are what we used before for r_min = 1.
+    % at r_min = 0 some stuff go wrong
+    if r_min ~= 0
+        g_thth_p = f_prime(g_thth,h,(r_min-2*h)^2,(r_min-h)^2,(r_max+h)^2,(r_max+2*h)^2,N);
+        g_thth_pp = f_pprime(g_thth,h,(r_min-2*h)^2,(r_min-h)^2,(r_max+h)^2,(r_max+2*h)^2,N);
+        Gamma_r_p = f_prime(Gamma_r,h,-2/(r_min-2*h),-2/(r_min-h),-2/(r_max+h),-2/(r_max+2*h) ,N);
+    end
+    
+    % Building constraints
+    H = -3/2*A_rr.*A_rr./g_rr./g_rr + 2/3.*K.*K - 5/2.*chi_p.*chi_p./chi./g_rr...
+            +2*chi_pp./g_rr + 2*chi./g_thth-2*chi.*g_thth_pp./g_rr./g_thth...
+            +2*chi_p.*g_thth_p./g_rr./g_thth+chi.*g_rr_p.*g_thth_p./g_rr./g_rr./g_thth...
+            -chi_p.*g_rr_p./g_rr./g_rr+chi.*g_thth_p.*g_thth_p./2./g_rr./g_thth./g_thth;
+    M_r = A_rr_p./g_rr - 2/3.*K_p...
+        - 3/2.*A_rr./g_rr.*(chi_p./chi - g_thth_p./g_thth+ g_rr_p./g_rr);
+    G = -g_rr_p./2./g_rr./g_rr+Gamma_r+g_thth_p./g_thth./g_rr;
+end
+
 % Horizon and expansion 
 function [j,hum,Theta] = Hor(g_rr,g_thth,K,A_rr,chi,N,r,h)
     global r_max
@@ -537,4 +507,84 @@ function [j,hum,Theta] = Hor(g_rr,g_thth,K,A_rr,chi,N,r,h)
             break;
         end
     end
+end
+
+function param_conv(h,t_end)
+    set(0, 'DefaultLineLineWidth', 1.4);
+    global r_min
+    global r_max
+    N=round((r_max-r_min)/h);
+    r=(r_min+h:h:r_max);
+    [U_coarse, t_size_coarse]=state_result(h, t_end);
+    [U_med, t_size_med]=state_result(h/2, t_end);
+    [U_fine, t_size_fine]=state_result(h/4, t_end);
+    [U_finest, t_size_finest]=state_result(h/8, t_end);     
+    [alpha_coarse, beta_r_coarse, B_r_coarse, chi_coarse, g_rr_coarse,...
+    g_thth_coarse, A_rr_coarse, K_coarse, Gamma_r_coarse]=var_t(U_coarse);
+    [alpha_med, beta_r_med, B_r_med, chi_med, g_rr_med, g_thth_med,...
+    A_rr_med, K_med, Gamma_r_med]=var_t(U_med);
+    [alpha_fine, beta_r_fine, B_r_fine, chi_fine, g_rr_fine, g_thth_fine,...
+    A_rr_fine, K_fine, Gamma_r_fine]=var_t(U_fine) ;
+    [alpha_finest, beta_r_finest, B_r_finest, chi_finest, g_rr_finest, g_thth_finest,...
+    A_rr_finest, K_finest, Gamma_r_finest]=var_t(U_finest) ;
+
+
+    alpha_error_medcoarse = error(alpha_med(2:2:2*N, t_size_med), alpha_coarse(:, t_size_coarse));
+    alpha_error_finemed = 16*error(alpha_fine(4:4:N*4, t_size_fine),alpha_med(2:2:2*N, t_size_med));
+    alpha_error_finestfine = 16^2*error(alpha_finest(8:8:N*8, t_size_finest),alpha_fine(4:4:4*N, t_size_fine));
+
+    beta_r_error_medcoarse = error(beta_r_med(2:2:2*N, t_size_med), beta_r_coarse(:, t_size_coarse));
+    beta_r_error_finemed = 16*error(beta_r_fine(4:4:N*4, t_size_fine),beta_r_med(2:2:2*N, t_size_med));
+    beta_r_error_finestfine = 16^2*error(beta_r_finest(8:8:N*8, t_size_finest),beta_r_fine(4:4:4*N, t_size_fine));
+    
+    chi_error_medcoarse = error(chi_med(2:2:2*N, t_size_med), chi_coarse(:, t_size_coarse));
+    chi_error_finemed = 16*error(chi_fine(4:4:N*4, t_size_fine),chi_med(2:2:2*N, t_size_med));
+    chi_error_finestfine = 16^2*error(chi_finest(8:8:N*8, t_size_finest),chi_fine(4:4:4*N, t_size_fine));
+
+    % Requires R2019b or later
+    title('$\Delta \alpha$ at $t = 0.5M$', 'Interpreter', 'latex');
+    t = tiledlayout(1,2,'TileSpacing','Compact','Padding','Compact');
+    nexttile %%%%% alpha plot
+    plot(r.', alpha_error_medcoarse, '-r');
+    hold on
+    plot(r.', alpha_error_finemed, 'b--');
+    plot(r.', alpha_error_finestfine, 'g-.');
+    hold off
+    ylabel('$\Delta \alpha$','Interpreter','latex','FontSize', 16)
+    xlim([0,2.5])
+    l=legend('$(\alpha_{M/50}-\alpha_{M/100})$', '$16(\alpha_{M/100}-\alpha_{M/200})$', '$256(\alpha_{M/200}-\alpha_{M/400})$');
+    set(l, 'Interpreter', 'latex','FontSize', 16)
+    set(l, 'FontSize', 16);
+    
+%     nexttile %%%%% beta_r plot
+%     plot(r.', beta_r_error_medcoarse, '-r');
+%     hold on
+%     plot(r.', beta_r_error_finemed, 'b--');
+%     plot(r.', beta_r_error_finestfine, 'g-.');
+%     hold off
+% 
+%     ylabel('$\Delta \beta^r$','Interpreter','latex') ;
+%     xlim([0,2.5])
+%     l=legend('$(\beta^r_{M/50}-\beta^r_{M/100})$', '$16(\beta^r_{M/100}-\beta^r_{M/200})$', '$256(\beta^r_{M/200}-\beta^r_{M/400})$');
+%     set(l, 'Interpreter', 'latex');
+%     set(l, 'FontSize', 16);
+    
+    nexttile %%%%% chi plot
+    plot(r.', chi_error_medcoarse, '-r');
+    hold on
+    plot(r.', chi_error_finemed, 'b--');
+    plot(r.', chi_error_finestfine, 'g-.');
+    hold off
+    ylabel('$\Delta \chi$','Interpreter','latex','FontSize', 16)
+    l=legend('$(\chi_{M/50}-\chi_{M/100})$', '$16(\chi_{M/100}-\chi_{M/200})$', '$256(\chi_{M/200}-\chi_{M/400})$');
+    xlim([0,2.5])
+    set(l, 'FontSize', 16);
+    set(l, 'Interpreter', 'latex');
+    
+    %title(t,'Convergence plots at $t = 0.5$', 'Interpreter', 'latex', 'FontSize', 18)
+    xlabel(t,'$r/M$', 'Interpreter', 'latex','FontSize', 16)
+    
+    % Requires R2020a or later
+    set(gcf,'position',[10,10,900,400])
+    exportgraphics(t,'alpha_chi_conv_t2.png','BackgroundColor','none','Resolution',300)
 end
