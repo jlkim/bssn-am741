@@ -284,6 +284,18 @@ function [charac1, charac2]=CHARAC(chi, g_rr, g_thth, A_rr, K, Gamma_r, h, N)
         +g_thth_p./(2.*g_rr.*g_thth)- K./(g_rr.*chi).^0.5;
 end
 
+function [alpha,beta_r,B_r,chi,g_rr,g_thth,A_rr,K,Gamma_r]=unpackage_init(v_old)
+    alpha = v_old(:,1);
+    beta_r = v_old(:,2);
+    B_r = v_old(:,3);
+    chi=v_old(:,4);
+    g_rr=v_old(:,5);
+    g_thth=v_old(:,6);
+    A_rr=v_old(:,7);
+    K=v_old(:,8);
+    Gamma_r=v_old(:,9);
+end
+
 function v_old=initial_cond(h,r_min,r_max)
     % puncture == 1 means we have a puncture, otherwise we have flat space
     global n_var
@@ -618,6 +630,7 @@ function constraint_conv(h,t_end)
     t_size_fine = length(t_fine);
     [U_finest, t_finest]=state_result(h/8, t_end);   
     t_size_finest = length(t_finest);
+    
     [alpha_coarse, beta_r_coarse, B_r_coarse, chi_coarse, g_rr_coarse,...
     g_thth_coarse, A_rr_coarse, K_coarse, Gamma_r_coarse]=var_t(U_coarse);
     [alpha_med, beta_r_med, B_r_med, chi_med, g_rr_med, g_thth_med,...
@@ -651,24 +664,34 @@ function constraint_conv(h,t_end)
          chi_finest(:, iter), g_rr_finest(:, iter),g_thth_finest(:, iter), A_rr_finest(:, iter),...
          K_finest(:, iter), Gamma_r_finest(:, iter),h/8,8*N);
     end
-    %norm_coarse = sqrt(h)*sqrt(sum(M_r_coarse.^2));
-    %norm_med = sqrt(h/2)*sqrt(sum(M_r_med.^2));
-    %norm_fine = sqrt(h/4)*sqrt(sum(M_r_fine.^2));
-    
-    norm_coarse = sqrt(h)*sqrt(sum(G_r_coarse.^2));
-    norm_med = sqrt(h/2)*sqrt(sum(G_r_med.^2));
-    norm_fine = sqrt(h/4)*sqrt(sum(G_r_fine.^2));
-    semilogy(t_coarse, norm_coarse)
+   
+%%% Uncomment for L2 norm code %%%
+
+    H_norm_fine = sqrt(h)*sqrt( sum(H_fine(4:4:2*N,:).^2 ) );
+    H_norm_finest = sqrt(h)*sqrt( sum(H_finest(8:8:4*N,:).^2 ) );
+    M_r_norm_fine = sqrt(h)*sqrt( sum(M_r_fine(4:4:2*N,:).^2 ) );
+    M_r_norm_finest = sqrt(h)*sqrt( sum(M_r_finest(8:8:4*N,:).^2 ) );
+    G_r_norm_fine = sqrt(h)*sqrt( sum(G_r_fine(4:4:2*N,:).^2 ) );
+    G_r_norm_finest = sqrt(h)*sqrt( sum(G_r_finest(8:8:4*N,:).^2 ) );
+
+    semilogy(t_fine, H_norm_fine, 'r')
     hold on
-    semilogy(t_med,16*norm_med)
-    semilogy(t_fine,16^2*norm_fine)
-    l=legend('$h = M/25$', '$h=M/50$', '$h=M/100$');
+    semilogy(t_finest, 16*H_norm_finest, 'r--')
+    semilogy(t_fine, M_r_norm_fine, 'b')
+    semilogy(t_finest, 16*M_r_norm_finest, 'b--')
+    semilogy(t_fine, G_r_norm_fine, 'g')
+    semilogy(t_finest, 16*G_r_norm_finest, 'g--')
+   
+    
+    l=legend('$\mathcal{H}$ with $h = M/100$', '$\mathcal{H}$ with $h = M/200$',...
+             '$\mathcal{M}_r$ with $h = M/100$', '$\mathcal{M}_r$ with $h = M/200$',...
+             '$\mathcal{G}_r$ with $h = M/100$', '$\mathcal{G}_r$ with $h = M/200$');
     set(l, 'FontSize', 14);
     set(l, 'Interpreter', 'latex');
     set(l, 'Location', 'southeast');
-    ylabel('$L^2$ norm of $\mathcal{G}^r$', 'Interpreter', 'latex','FontSize', 14)
+    ylabel('$L^2$ norm', 'Interpreter', 'latex','FontSize', 14)
     xlabel('$t/M$', 'Interpreter', 'latex','FontSize', 14)
     
-    % Requires R2020a or later
-    exportgraphics(axv,'G_conv.png','BackgroundColor','none','Resolution',300)
+%     % Requires R2020a or later
+%     exportgraphics('cosntraints_conv_time.png','BackgroundColor','none','Resolution',300)
 end
