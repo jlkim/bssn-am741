@@ -693,5 +693,5 @@ function constraint_conv(h,t_end)
     xlabel('$t/M$', 'Interpreter', 'latex','FontSize', 14)
     
 %     % Requires R2020a or later
-%     exportgraphics('cosntraints_conv_time.png','BackgroundColor','none','Resolution',300)
+    exportgraphics(gca, 'constraints_conv_time.png','BackgroundColor','none','Resolution',300)
 end
