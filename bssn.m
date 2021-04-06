@@ -12,21 +12,21 @@ function bssn
     v = 1; % Eulerian condition (v=0) or Lagrangian condition (v=1)
     eta = 1; % eta parameter in the Gamma-driver condition
     n_var = 9; % number of functions to evolve
-    r_min = 1;
+    r_min = 0;
     r_max = 10;
     diss_on = 0; % dissipation (Kreiss-Oliger) on (=1) or off (=0)
     sigma = 0.1;
-    puncture = 0;
-    precollapse = 0;
-    h = 1/50; % spatial grid
+    puncture = 1;
+    precollapse = 1;
+    h = 1/25; % spatial grid
     N=round((r_max-r_min)/h);
     r=(r_min+h:h:r_max);
 
     
-    t_end = 0.5;
-    plot_RHS(20)
+    t_end = 2;
+    %plot_RHS(20)
     %param_conv(h,t_end)
-    
+    constraint_conv(h,t_end)
     %plotting
 %     plot(r,chi_coarse(:, t_size_coarse), 'r')
 %     hold on
@@ -116,7 +116,7 @@ bhMass=zeros(horsize_t);
 %     end
 end
 
-function [U, t_size]=state_result(h, t_end)
+function [U, t]=state_result(h, t_end)
     global n_var
     global r_min
     global r_max
@@ -125,11 +125,10 @@ function [U, t_size]=state_result(h, t_end)
     
     % time at which we want to end the simulation
     % time to solve the equations
-    tspan = [0 t_end];
+    tspan = [0:1/400:t_end];
     y0 = initial_cond(h,r_min,r_max);
     y0=reshape(y0, [], 1);
     [t,y] = ode45(@(t,y) dydt(t,y,h,N),tspan,y0);
-
     %getting the output size
     [t_size,y_size] = size(y);
     % reshaping the array so it's nicer to unpackage
@@ -392,7 +391,7 @@ function v=KreissOliger(f,sigma,h,a,b,c,x,y,z,N)
 end
 
 % Calculating constraints
-function [H, M_r, G] = constraints(alpha, beta_r, B_r, chi, g_rr,g_thth, A_rr, K, Gamma_r)
+function [H, M_r, G_r] = constraints(alpha, beta_r, B_r, chi, g_rr,g_thth, A_rr, K, Gamma_r,h,N)
     global n_var
     global r_min
     global r_max
@@ -447,7 +446,7 @@ function [H, M_r, G] = constraints(alpha, beta_r, B_r, chi, g_rr,g_thth, A_rr, K
             -chi_p.*g_rr_p./g_rr./g_rr+chi.*g_thth_p.*g_thth_p./2./g_rr./g_thth./g_thth;
     M_r = A_rr_p./g_rr - 2/3.*K_p...
         - 3/2.*A_rr./g_rr.*(chi_p./chi - g_thth_p./g_thth+ g_rr_p./g_rr);
-    G = -g_rr_p./2./g_rr./g_rr+Gamma_r+g_thth_p./g_thth./g_rr;
+    G_r = -g_rr_p./2./g_rr./g_rr+Gamma_r+g_thth_p./g_thth./g_rr;
 end
 
 % Horizon and expansion 
@@ -528,10 +527,14 @@ function param_conv(h,t_end)
     global r_max
     N=round((r_max-r_min)/h);
     r=(r_min+h:h:r_max);
-    [U_coarse, t_size_coarse]=state_result(h, t_end);
-    [U_med, t_size_med]=state_result(h/2, t_end);
-    [U_fine, t_size_fine]=state_result(h/4, t_end);
-    [U_finest, t_size_finest]=state_result(h/8, t_end);     
+    [U_coarse, t_coarse]=state_result(h, t_end);
+    t_size_coarse = length(t_coarse);
+    [U_med, t_med]=state_result(h/2, t_end);
+    t_size_med = length(t_med);
+    [U_fine, t_fine]=state_result(h/4, t_end);
+    t_size_fine = length(t_fine);
+    [U_finest, t_finest]=state_result(h/8, t_end);     
+    t_size_finest = length(t_finest);
     [alpha_coarse, beta_r_coarse, B_r_coarse, chi_coarse, g_rr_coarse,...
     g_thth_coarse, A_rr_coarse, K_coarse, Gamma_r_coarse]=var_t(U_coarse);
     [alpha_med, beta_r_med, B_r_med, chi_med, g_rr_med, g_thth_med,...
@@ -563,8 +566,8 @@ function param_conv(h,t_end)
     plot(r.', alpha_error_finestfine, 'g-.');
     hold off
     ylabel('$\Delta \alpha$','Interpreter','latex','FontSize', 14)
-    xlim([0,2.5])
-    l=legend('$(\alpha_{M/50}-\alpha_{M/100})$', '$16(\alpha_{M/100}-\alpha_{M/200})$', '$256(\alpha_{M/200}-\alpha_{M/400})$');
+    xlim([0,4])
+    l=legend('$(\alpha_{M/25}-\alpha_{M/50})$', '$16(\alpha_{M/50}-\alpha_{M/100})$', '$256(\alpha_{M/100}-\alpha_{M/200})$');
     set(l, 'Interpreter', 'latex','FontSize', 14)
     set(l, 'FontSize', 14);
     
@@ -588,8 +591,8 @@ function param_conv(h,t_end)
     plot(r.', chi_error_finestfine, 'g-.');
     hold off
     ylabel('$\Delta \chi$','Interpreter','latex','FontSize', 14)
-    l=legend('$(\chi_{M/50}-\chi_{M/100})$', '$16(\chi_{M/100}-\chi_{M/200})$', '$256(\chi_{M/200}-\chi_{M/400})$');
-    xlim([0,2.5])
+    l=legend('$(\chi_{M/25}-\chi_{M/50})$', '$16(\chi_{M/50}-\chi_{M/100})$', '$256(\chi_{M/100}-\chi_{M/200})$');
+    xlim([0,4])
     set(l, 'FontSize', 14);
     set(l, 'Interpreter', 'latex');
     
@@ -598,5 +601,74 @@ function param_conv(h,t_end)
     
     % Requires R2020a or later
     set(gcf,'position',[10,10,900,400])
-    exportgraphics(t,'alpha_chi_conv_t05.png','BackgroundColor','none','Resolution',300)
+    exportgraphics(t,'alpha_chi_conv_t2.png','BackgroundColor','none','Resolution',300)
+end
+
+function constraint_conv(h,t_end)
+    set(0, 'DefaultLineLineWidth', 1.2);
+    global r_min
+    global r_max
+    N=round((r_max-r_min)/h);
+    r=(r_min+h:h:r_max);
+    [U_coarse, t_coarse]=state_result(h, t_end);
+    t_size_coarse = length(t_coarse);
+    [U_med, t_med]=state_result(h/2, t_end);
+    t_size_med = length(t_med);
+    [U_fine, t_fine]=state_result(h/4, t_end);
+    t_size_fine = length(t_fine);
+    [U_finest, t_finest]=state_result(h/8, t_end);   
+    t_size_finest = length(t_finest);
+    [alpha_coarse, beta_r_coarse, B_r_coarse, chi_coarse, g_rr_coarse,...
+    g_thth_coarse, A_rr_coarse, K_coarse, Gamma_r_coarse]=var_t(U_coarse);
+    [alpha_med, beta_r_med, B_r_med, chi_med, g_rr_med, g_thth_med,...
+    A_rr_med, K_med, Gamma_r_med]=var_t(U_med);
+    [alpha_fine, beta_r_fine, B_r_fine, chi_fine, g_rr_fine, g_thth_fine,...
+    A_rr_fine, K_fine, Gamma_r_fine]=var_t(U_fine) ;
+    [alpha_finest, beta_r_finest, B_r_finest, chi_finest, g_rr_finest, g_thth_finest,...
+    A_rr_finest, K_finest, Gamma_r_finest]=var_t(U_finest) ;
+
+    for iter=1:t_size_coarse
+        [H_coarse(:, iter), M_r_coarse(:,iter), G_r_coarse(:,iter)] ...
+         = constraints(alpha_coarse(:, iter), beta_r_coarse(:, iter), B_r_coarse(:, iter),...
+         chi_coarse(:, iter), g_rr_coarse(:, iter),g_thth_coarse(:, iter), A_rr_coarse(:, iter),...
+         K_coarse(:, iter), Gamma_r_coarse(:, iter),h,N);
+    end
+    for iter=1:t_size_med
+        [H_med(:, iter), M_r_med(:,iter), G_r_med(:,iter)] ...
+         = constraints(alpha_med(:, iter), beta_r_med(:, iter), B_r_med(:, iter),...
+         chi_med(:, iter), g_rr_med(:, iter),g_thth_med(:, iter), A_rr_med(:, iter),...
+         K_med(:, iter), Gamma_r_med(:, iter),h/2,2*N);
+    end
+    for iter=1:t_size_fine
+        [H_fine(:, iter), M_r_fine(:,iter), G_r_fine(:,iter)] ...
+         = constraints(alpha_fine(:, iter), beta_r_fine(:, iter), B_r_fine(:, iter),...
+         chi_fine(:, iter), g_rr_fine(:, iter),g_thth_fine(:, iter), A_rr_fine(:, iter),...
+         K_fine(:, iter), Gamma_r_fine(:, iter),h/4,4*N);
+    end
+    for iter=1:t_size_finest
+        [H_finest(:, iter), M_r_finest(:,iter), G_r_finest(:,iter)] ...
+         = constraints(alpha_finest(:, iter), beta_r_finest(:, iter), B_r_finest(:, iter),...
+         chi_finest(:, iter), g_rr_finest(:, iter),g_thth_finest(:, iter), A_rr_finest(:, iter),...
+         K_finest(:, iter), Gamma_r_finest(:, iter),h/8,8*N);
+    end
+    %norm_coarse = sqrt(h)*sqrt(sum(M_r_coarse.^2));
+    %norm_med = sqrt(h/2)*sqrt(sum(M_r_med.^2));
+    %norm_fine = sqrt(h/4)*sqrt(sum(M_r_fine.^2));
+    
+    norm_coarse = sqrt(h)*sqrt(sum(G_r_coarse.^2));
+    norm_med = sqrt(h/2)*sqrt(sum(G_r_med.^2));
+    norm_fine = sqrt(h/4)*sqrt(sum(G_r_fine.^2));
+    semilogy(t_coarse, norm_coarse)
+    hold on
+    semilogy(t_med,16*norm_med)
+    semilogy(t_fine,16^2*norm_fine)
+    l=legend('$h = M/25$', '$h=M/50$', '$h=M/100$');
+    set(l, 'FontSize', 14);
+    set(l, 'Interpreter', 'latex');
+    set(l, 'Location', 'southeast');
+    ylabel('$L^2$ norm of $\mathcal{G}^r$', 'Interpreter', 'latex','FontSize', 14)
+    xlabel('$t/M$', 'Interpreter', 'latex','FontSize', 14)
+    
+    % Requires R2020a or later
+    exportgraphics(axv,'G_conv.png','BackgroundColor','none','Resolution',300)
 end
