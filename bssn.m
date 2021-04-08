@@ -77,32 +77,77 @@ bhMass=zeros(horsize_t);
         bhMass(iter)=sqrt(g_thth(j+1,iter))./2;
     end
     
-%     ss=floor(horsize_t/4);
+    %     n_plots=7;
+%     ss=floor(horsize_t/n_plots);
+%     str=string(zeros(n_plots,1));
+%     str(1)="$t =$ " + time(ss) + "$M$";
 %     figure(1)
 %         plot(r,Theta(:,ss))
 %         hold on
-%         plot(r,Theta(:,2*ss))
-%         plot(r,Theta(:,3*ss))
-%         plot(r,Theta(:,4*ss))
-%         axis([0. r_max-2.*h -0.8 .8])
-%         xlabel('r')
-%         ylabel('\Theta')
-%         title('Time evolution of Expansion Parameter \Theta')
-%         legend("t = " + time(ss), "t = " + time(2*ss),"t = " + time(3*ss),"t = " + time(4*ss))
+%         for i_plots=2:n_plots
+%             plot(r,Theta(:,i_plots*ss))
+%             str(i_plots)="$t =$ " + time(i_plots*ss) + "$M$";
+%         end
+%         axis([0. r_max/3. -1.4 .6])
+%         xlabel('$r$','Interpreter','latex')
+%         ylabel('$\Theta$','Interpreter','latex')
+%         title('Time evolution of Expansion Parameter $\Theta$','Interpreter','latex')
+%         legend(str,'Interpreter','latex')
+%         hold off
+%         pause(0.001)
+%     figure(2)
+%         plot(r,theta_0(:,ss))
+%         hold on
+%         for i_plots=2:n_plots
+%             plot(r,theta_0(:,i_plots*ss))
+%         end
+%         axis([0. r_max/8.6 0. .6])
+%         xlabel('$r$','Interpreter','latex')
+%         ylabel('$\theta_0$','Interpreter','latex')
+%         title('Time evolution of lightcone tilting $\theta_0$','Interpreter','latex')
+%         legend(str,'Interpreter','latex')
+%         hold off
+%         pause(0.001)
+%      figure(3)
+%         plot(r,u1(:,ss))
+%         hold on
+%         for i_plots=2:n_plots
+%             plot(r,u1(:,i_plots*ss))
+%         end
+% %         axis([0. r_max/8.6 0. .6])
+%         xlabel('$r$','Interpreter','latex')
+%         ylabel('$u_r^+$','Interpreter','latex')
+%         title('Time evolution of null vectors $u_r^+$','Interpreter','latex')
+%         legend(str,'Interpreter','latex')
+%         hold off
+%         pause(0.001)
+%      figure(4)
+%         plot(r,u2(:,ss))
+%         hold on
+%         for i_plots=2:n_plots
+%             plot(r,u2(:,i_plots*ss))
+%         end
+% %         axis([0. r_max/8.6 0. .6])
+%         xlabel('$r$','Interpreter','latex')
+%         ylabel('$u_r^-$','Interpreter','latex')
+%         title('Time evolution of null vectors $u_r^-$','Interpreter','latex')
+%         legend(str,'Interpreter','latex')
 %         hold off
 %         pause(0.001)
     
+
     figure(2)
     plot(time,hor)
-    xlabel('t')
-    ylabel('r_{hor}')
-    title('Horizon evolution r_{hor} vs. t')
+    xlabel('$t$','Interpreter','latex')
+    ylabel('$r_\text{hor}$','Interpreter','latex')
+    title('Horizon evolution $r_{hor}$ vs. $t$','Interpreter','latex')
     
-    figure(3)
-    plot(time,bhMass)
-    xlabel('t')
-    ylabel('Blackhole Mass')
-    title('Blackhole Mass M_\circ vs. t')
+    
+%     figure(3)
+%     plot(time,bhMass)
+%    xlabel('$t$','Interpreter','latex')
+%     ylabel('$m_\circ$','Interpreter','latex')
+%     title('Horizon evolution $m_\circ$ vs. $t$','Interpreter','latex')
      
       
 % 
@@ -694,4 +739,15 @@ function constraint_conv(h,t_end)
     
 %     % Requires R2020a or later
     exportgraphics(gca, 'constraints_conv_time.png','BackgroundColor','none','Resolution',300)
+end
+
+
+% Lightcones
+function [ur_1,ur_2,theta_0] = lightcones(alpha,beta_r,chi,g_rr)
+ur_1 = -beta_r+sqrt(alpha.*alpha.*chi./g_rr);
+ur_2 = -beta_r-sqrt(alpha.*alpha.*chi./g_rr);
+u1 = 1./(1.+ur_1.*ur_1);
+u2 = 1./(1.+ur_2.*ur_2);
+theta_0 = 0.5.*(acos(u1)+acos(u2));
+
 end
