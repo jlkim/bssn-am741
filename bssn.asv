@@ -25,8 +25,8 @@ function bssn
     
     t_end = 2;
     %plot_RHS(20)
-    %param_conv(h,t_end)
-    constraint_conv(h,t_end)
+    param_conv(h,t_end)
+    %constraint_conv(h,t_end)
     %plotting
 %     plot(r,chi_coarse(:, t_size_coarse), 'r')
 %     hold on
@@ -77,32 +77,77 @@ bhMass=zeros(horsize_t);
         bhMass(iter)=sqrt(g_thth(j+1,iter))./2;
     end
     
-%     ss=floor(horsize_t/4);
+    %     n_plots=7;
+%     ss=floor(horsize_t/n_plots);
+%     str=string(zeros(n_plots,1));
+%     str(1)="$t =$ " + time(ss) + "$M$";
 %     figure(1)
 %         plot(r,Theta(:,ss))
 %         hold on
-%         plot(r,Theta(:,2*ss))
-%         plot(r,Theta(:,3*ss))
-%         plot(r,Theta(:,4*ss))
-%         axis([0. r_max-2.*h -0.8 .8])
-%         xlabel('r')
-%         ylabel('\Theta')
-%         title('Time evolution of Expansion Parameter \Theta')
-%         legend("t = " + time(ss), "t = " + time(2*ss),"t = " + time(3*ss),"t = " + time(4*ss))
+%         for i_plots=2:n_plots
+%             plot(r,Theta(:,i_plots*ss))
+%             str(i_plots)="$t =$ " + time(i_plots*ss) + "$M$";
+%         end
+%         axis([0. r_max/3. -1.4 .6])
+%         xlabel('$r$','Interpreter','latex')
+%         ylabel('$\Theta$','Interpreter','latex')
+%         title('Time evolution of Expansion Parameter $\Theta$','Interpreter','latex')
+%         legend(str,'Interpreter','latex')
+%         hold off
+%         pause(0.001)
+%     figure(2)
+%         plot(r,theta_0(:,ss))
+%         hold on
+%         for i_plots=2:n_plots
+%             plot(r,theta_0(:,i_plots*ss))
+%         end
+%         axis([0. r_max/8.6 0. .6])
+%         xlabel('$r$','Interpreter','latex')
+%         ylabel('$\theta_0$','Interpreter','latex')
+%         title('Time evolution of lightcone tilting $\theta_0$','Interpreter','latex')
+%         legend(str,'Interpreter','latex')
+%         hold off
+%         pause(0.001)
+%      figure(3)
+%         plot(r,u1(:,ss))
+%         hold on
+%         for i_plots=2:n_plots
+%             plot(r,u1(:,i_plots*ss))
+%         end
+% %         axis([0. r_max/8.6 0. .6])
+%         xlabel('$r$','Interpreter','latex')
+%         ylabel('$u_r^+$','Interpreter','latex')
+%         title('Time evolution of null vectors $u_r^+$','Interpreter','latex')
+%         legend(str,'Interpreter','latex')
+%         hold off
+%         pause(0.001)
+%      figure(4)
+%         plot(r,u2(:,ss))
+%         hold on
+%         for i_plots=2:n_plots
+%             plot(r,u2(:,i_plots*ss))
+%         end
+% %         axis([0. r_max/8.6 0. .6])
+%         xlabel('$r$','Interpreter','latex')
+%         ylabel('$u_r^-$','Interpreter','latex')
+%         title('Time evolution of null vectors $u_r^-$','Interpreter','latex')
+%         legend(str,'Interpreter','latex')
 %         hold off
 %         pause(0.001)
     
+
     figure(2)
     plot(time,hor)
-    xlabel('t')
-    ylabel('r_{hor}')
-    title('Horizon evolution r_{hor} vs. t')
+    xlabel('$t$','Interpreter','latex')
+    ylabel('$r_\text{hor}$','Interpreter','latex')
+    title('Horizon evolution $r_{hor}$ vs. $t$','Interpreter','latex')
     
-    figure(3)
-    plot(time,bhMass)
-    xlabel('t')
-    ylabel('Blackhole Mass')
-    title('Blackhole Mass M_\circ vs. t')
+    
+%     figure(3)
+%     plot(time,bhMass)
+%    xlabel('$t$','Interpreter','latex')
+%     ylabel('$m_\circ$','Interpreter','latex')
+%     title('Horizon evolution $m_\circ$ vs. $t$','Interpreter','latex')
      
       
 % 
@@ -557,17 +602,17 @@ function param_conv(h,t_end)
     A_rr_finest, K_finest, Gamma_r_finest]=var_t(U_finest) ;
 
 
-    alpha_error_medcoarse = error(alpha_med(2:2:2*N, t_size_med), alpha_coarse(:, t_size_coarse));
-    alpha_error_finemed = 16*error(alpha_fine(4:4:N*4, t_size_fine),alpha_med(2:2:2*N, t_size_med));
-    alpha_error_finestfine = 16^2*error(alpha_finest(8:8:N*8, t_size_finest),alpha_fine(4:4:4*N, t_size_fine));
+    alpha_error_medcoarse = error(alpha_med(2:2:2*N, 1), alpha_coarse(:, 1));
+    alpha_error_finemed = 16*error(alpha_fine(4:4:N*4, 1),alpha_med(2:2:2*N, 1));
+    alpha_error_finestfine = 16^2*error(alpha_finest(8:8:N*8, 1),alpha_fine(4:4:4*N, 1));
 
-    beta_r_error_medcoarse = error(beta_r_med(2:2:2*N, t_size_med), beta_r_coarse(:, t_size_coarse));
-    beta_r_error_finemed = 16*error(beta_r_fine(4:4:N*4, t_size_fine),beta_r_med(2:2:2*N, t_size_med));
-    beta_r_error_finestfine = 16^2*error(beta_r_finest(8:8:N*8, t_size_finest),beta_r_fine(4:4:4*N, t_size_fine));
+    beta_r_error_medcoarse = error(beta_r_med(2:2:2*N, 1), beta_r_coarse(:, 1));
+    beta_r_error_finemed = 16*error(beta_r_fine(4:4:N*4, 1),beta_r_med(2:2:2*N, 1));
+    beta_r_error_finestfine = 16^2*error(beta_r_finest(8:8:N*8, 1),beta_r_fine(4:4:4*N, 1));
     
-    chi_error_medcoarse = error(chi_med(2:2:2*N, t_size_med), chi_coarse(:, t_size_coarse));
-    chi_error_finemed = 16*error(chi_fine(4:4:N*4, t_size_fine),chi_med(2:2:2*N, t_size_med));
-    chi_error_finestfine = 16^2*error(chi_finest(8:8:N*8, t_size_finest),chi_fine(4:4:4*N, t_size_fine));
+    chi_error_medcoarse = error(chi_med(2:2:2*N, 1), chi_coarse(:, 1));
+    chi_error_finemed = 16*error(chi_fine(4:4:N*4, 1),chi_med(2:2:2*N, 1));
+    chi_error_finestfine = 16^2*error(chi_finest(8:8:N*8, 1),chi_fine(4:4:4*N, 1));
 
     % Requires R2019b or later
     t = tiledlayout(1,2,'TileSpacing','Compact','Padding','Compact');
@@ -610,10 +655,59 @@ function param_conv(h,t_end)
     
     %title(t,'Convergence plots at $t = 0.5$', 'Interpreter', 'latex', 'FontSize', 18)
     xlabel(t,'$r/M$', 'Interpreter', 'latex','FontSize', 14)
+    title(t, '$t = 0$', 'latex','FontSize', 14)
     
     % Requires R2020a or later
     set(gcf,'position',[10,10,900,400])
-    exportgraphics(t,'alpha_chi_conv_t2.png','BackgroundColor','none','Resolution',300)
+    
+    gif('myfile.gif','resolution',300)
+    
+    for iter=2:10:t_size_finest
+        alpha_error_medcoarse = error(alpha_med(2:2:2*N, t), alpha_coarse(:, t));
+        alpha_error_finemed = 16*error(alpha_fine(4:4:N*4, t),alpha_med(2:2:2*N, t));
+        alpha_error_finestfine = 16^2*error(alpha_finest(8:8:N*8, t),alpha_fine(4:4:4*N, t));
+
+        beta_r_error_medcoarse = error(beta_r_med(2:2:2*N, t), beta_r_coarse(:, t));
+        beta_r_error_finemed = 16*error(beta_r_fine(4:4:N*4, t),beta_r_med(2:2:2*N, t));
+        beta_r_error_finestfine = 16^2*error(beta_r_finest(8:8:N*8, t),beta_r_fine(4:4:4*N, t));
+
+        chi_error_medcoarse = error(chi_med(2:2:2*N, t), chi_coarse(:, t));
+        chi_error_finemed = 16*error(chi_fine(4:4:N*4, t),chi_med(2:2:2*N, t));
+        chi_error_finestfine = 16^2*error(chi_finest(8:8:N*8,t),chi_fine(4:4:4*N, t));
+
+        % Requires R2019b or later
+        t = tiledlayout(1,2,'TileSpacing','Compact','Padding','Compact');
+        nexttile %%%%% alpha plot
+        plot(r.', alpha_error_medcoarse, '-r');
+        hold on
+        plot(r.', alpha_error_finemed, 'b--');
+        plot(r.', alpha_error_finestfine, 'g-.');
+        hold off
+        ylabel('$\Delta \alpha$','Interpreter','latex','FontSize', 14)
+        xlim([0,4])
+        l=legend('$(\alpha_{M/25}-\alpha_{M/50})$', '$16(\alpha_{M/50}-\alpha_{M/100})$', '$256(\alpha_{M/100}-\alpha_{M/200})$');
+        set(l, 'Interpreter', 'latex','FontSize', 14)
+        set(l, 'FontSize', 14);
+        nexttile %%%%% chi plot
+        plot(r.', chi_error_medcoarse, '-r');
+        hold on
+        plot(r.', chi_error_finemed, 'b--');
+        plot(r.', chi_error_finestfine, 'g-.');
+        hold off
+        ylabel('$\Delta \chi$','Interpreter','latex','FontSize', 14)
+        l=legend('$(\chi_{M/25}-\chi_{M/50})$', '$16(\chi_{M/50}-\chi_{M/100})$', '$256(\chi_{M/100}-\chi_{M/200})$');
+        xlim([0,4])
+        set(l, 'FontSize', 14);
+        set(l, 'Interpreter', 'latex');
+
+        %title(t,'Convergence plots at $t = 0.5$', 'Interpreter', 'latex', 'FontSize', 18)
+        xlabel(t,'$r/M$', 'Interpreter', 'latex','FontSize', 14)
+        title(t, '$t = $', 'latex','FontSize', 14)
+        gif
+    end
+
+    
+    %exportgraphics(t,'alpha_chi_conv_t2.png','BackgroundColor','none','Resolution',300)
 end
 
 function constraint_conv(h,t_end)
@@ -665,25 +759,6 @@ function constraint_conv(h,t_end)
          K_finest(:, iter), Gamma_r_finest(:, iter),h/8,8*N);
     end
    
-
-    [H_coarse, M_r_coarse, G_r_coarse] ...
-     = constraints(alpha_coarse, beta_r_coarse, B_r_coarse,...
-       chi_coarse, g_rr_coarse,g_thth_coarse, A_rr_coarse,...
-       K_coarse, Gamma_r_coarse,h,N);
-
-    [H_med, M_r_med, G_r_med] ...
-         = constraints(alpha_med, beta_r_med, B_r_med,...
-         chi_med, g_rr_med,g_thth_med, A_rr_med,...
-         K_med, Gamma_r_med,h/2,2*N);    
-    [H_fine, M_r_fine, G_r_fine] ...
-         = constraints(alpha_fine, beta_r_fine, B_r_fine,...
-         chi_fine, g_rr_fine,g_thth_fine, A_rr_fine,...
-         K_fine, Gamma_r_fine,h/4,4*N);         
-    [H_finest, M_r_finest, G_r_finest] ...
-         = constraints(alpha_finest, beta_r_finest, B_r_finest,...
-         chi_finest, g_rr_finest,g_thth_finest, A_rr_finest,...
-         K_finest, Gamma_r_finest,h/8,8*N);       
-
 %%% Uncomment for L2 norm code %%%
 
     H_norm_fine = sqrt(h)*sqrt( sum(H_fine(4:4:2*N,:).^2 ) );
@@ -712,5 +787,16 @@ function constraint_conv(h,t_end)
     xlabel('$t/M$', 'Interpreter', 'latex','FontSize', 14)
     
 %     % Requires R2020a or later
-%     exportgraphics('cosntraints_conv_time.png','BackgroundColor','none','Resolution',300)
+    exportgraphics(gca, 'constraints_conv_time.png','BackgroundColor','none','Resolution',300)
+end
+
+
+% Lightcones
+function [ur_1,ur_2,theta_0] = lightcones(alpha,beta_r,chi,g_rr)
+ur_1 = -beta_r+sqrt(alpha.*alpha.*chi./g_rr);
+ur_2 = -beta_r-sqrt(alpha.*alpha.*chi./g_rr);
+u1 = 1./(1.+ur_1.*ur_1);
+u2 = 1./(1.+ur_2.*ur_2);
+theta_0 = 0.5.*(acos(u1)+acos(u2));
+
 end

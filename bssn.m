@@ -25,8 +25,8 @@ function bssn
     
     t_end = 2;
     %plot_RHS(20)
-    %param_conv(h,t_end)
-    constraint_conv(h,t_end)
+    param_conv(h,t_end)
+    %constraint_conv(h,t_end)
     %plotting
 %     plot(r,chi_coarse(:, t_size_coarse), 'r')
 %     hold on
@@ -659,6 +659,139 @@ function param_conv(h,t_end)
     % Requires R2020a or later
     set(gcf,'position',[10,10,900,400])
     exportgraphics(t,'alpha_chi_conv_t2.png','BackgroundColor','none','Resolution',300)
+end
+
+function param_conv_animate(h,t_end)
+    set(0, 'DefaultLineLineWidth', 1.2);
+    global r_min
+    global r_max
+    N=round((r_max-r_min)/h);
+    r=(r_min+h:h:r_max);
+    [U_coarse, t_coarse]=state_result(h, t_end);
+    t_size_coarse = length(t_coarse);
+    [U_med, t_med]=state_result(h/2, t_end);
+    t_size_med = length(t_med);
+    [U_fine, t_fine]=state_result(h/4, t_end);
+    t_size_fine = length(t_fine);
+    [U_finest, t_finest]=state_result(h/8, t_end);     
+    t_size_finest = length(t_finest);
+    [alpha_coarse, beta_r_coarse, B_r_coarse, chi_coarse, g_rr_coarse,...
+    g_thth_coarse, A_rr_coarse, K_coarse, Gamma_r_coarse]=var_t(U_coarse);
+    [alpha_med, beta_r_med, B_r_med, chi_med, g_rr_med, g_thth_med,...
+    A_rr_med, K_med, Gamma_r_med]=var_t(U_med);
+    [alpha_fine, beta_r_fine, B_r_fine, chi_fine, g_rr_fine, g_thth_fine,...
+    A_rr_fine, K_fine, Gamma_r_fine]=var_t(U_fine) ;
+    [alpha_finest, beta_r_finest, B_r_finest, chi_finest, g_rr_finest, g_thth_finest,...
+    A_rr_finest, K_finest, Gamma_r_finest]=var_t(U_finest) ;
+
+
+    alpha_error_medcoarse = error(alpha_med(2:2:2*N, 1), alpha_coarse(:, 1));
+    alpha_error_finemed = 16*error(alpha_fine(4:4:N*4, 1),alpha_med(2:2:2*N, 1));
+    alpha_error_finestfine = 16^2*error(alpha_finest(8:8:N*8, 1),alpha_fine(4:4:4*N, 1));
+
+    beta_r_error_medcoarse = error(beta_r_med(2:2:2*N, 1), beta_r_coarse(:, 1));
+    beta_r_error_finemed = 16*error(beta_r_fine(4:4:N*4, 1),beta_r_med(2:2:2*N, 1));
+    beta_r_error_finestfine = 16^2*error(beta_r_finest(8:8:N*8, 1),beta_r_fine(4:4:4*N, 1));
+    
+    chi_error_medcoarse = error(chi_med(2:2:2*N, 1), chi_coarse(:, 1));
+    chi_error_finemed = 16*error(chi_fine(4:4:N*4, 1),chi_med(2:2:2*N, 1));
+    chi_error_finestfine = 16^2*error(chi_finest(8:8:N*8, 1),chi_fine(4:4:4*N, 1));
+
+    % Requires R2019b or later
+    t = tiledlayout(1,2,'TileSpacing','Compact','Padding','Compact');
+    nexttile %%%%% alpha plot
+    plot(r.', alpha_error_medcoarse, '-r');
+    hold on
+    plot(r.', alpha_error_finemed, 'b--');
+    plot(r.', alpha_error_finestfine, 'g-.');
+    hold off
+    ylabel('$\Delta \alpha$','Interpreter','latex','FontSize', 14)
+    xlim([0,4])
+    l=legend('$(\alpha_{M/25}-\alpha_{M/50})$', '$16(\alpha_{M/50}-\alpha_{M/100})$', '$256(\alpha_{M/100}-\alpha_{M/200})$');
+    set(l, 'Interpreter', 'latex','FontSize', 14)
+    set(l, 'FontSize', 14);
+    
+%     nexttile %%%%% beta_r plot
+%     plot(r.', beta_r_error_medcoarse, '-r');
+%     hold on
+%     plot(r.', beta_r_error_finemed, 'b--');
+%     plot(r.', beta_r_error_finestfine, 'g-.');
+%     hold off
+% 
+%     ylabel('$\Delta \beta^r$','Interpreter','latex') ;
+%     xlim([0,2.5])
+%     l=legend('$(\beta^r_{M/50}-\beta^r_{M/100})$', '$16(\beta^r_{M/100}-\beta^r_{M/200})$', '$256(\beta^r_{M/200}-\beta^r_{M/400})$');
+%     set(l, 'Interpreter', 'latex');
+%     set(l, 'FontSize', 16);
+    
+    nexttile %%%%% chi plot
+    plot(r.', chi_error_medcoarse, '-r');
+    hold on
+    plot(r.', chi_error_finemed, 'b--');
+    plot(r.', chi_error_finestfine, 'g-.');
+    hold off
+    ylabel('$\Delta \chi$','Interpreter','latex','FontSize', 14)
+    l=legend('$(\chi_{M/25}-\chi_{M/50})$', '$16(\chi_{M/50}-\chi_{M/100})$', '$256(\chi_{M/100}-\chi_{M/200})$');
+    xlim([0,4])
+    set(l, 'FontSize', 14);
+    set(l, 'Interpreter', 'latex');
+    
+    %title(t,'Convergence plots at $t = 0.5$', 'Interpreter', 'latex', 'FontSize', 18)
+    title(t, '$t = 0$', 'Interpreter', 'latex','FontSize', 14)
+    xlabel(t,'$r/M$', 'Interpreter', 'latex','FontSize', 14)
+    
+    
+    % Requires R2020a or later
+    set(gcf,'position',[10,10,900,400])
+    
+    gif('myfile.gif','resolution',300)
+    
+    for iter=2:10:t_size_finest
+        alpha_error_medcoarse = error(alpha_med(2:2:2*N, iter), alpha_coarse(:, iter));
+        alpha_error_finemed = 16*error(alpha_fine(4:4:N*4, iter),alpha_med(2:2:2*N, iter));
+        alpha_error_finestfine = 16^2*error(alpha_finest(8:8:N*8, iter),alpha_fine(4:4:4*N, iter));
+
+        beta_r_error_medcoarse = error(beta_r_med(2:2:2*N, iter), beta_r_coarse(:, iter));
+        beta_r_error_finemed = 16*error(beta_r_fine(4:4:N*4, iter),beta_r_med(2:2:2*N, iter));
+        beta_r_error_finestfine = 16^2*error(beta_r_finest(8:8:N*8, iter),beta_r_fine(4:4:4*N, iter));
+
+        chi_error_medcoarse = error(chi_med(2:2:2*N, iter), chi_coarse(:, iter));
+        chi_error_finemed = 16*error(chi_fine(4:4:N*4, iter),chi_med(2:2:2*N,iter));
+        chi_error_finestfine = 16^2*error(chi_finest(8:8:N*8,iter),chi_fine(4:4:4*N, iter));
+
+        % Requires R2019b or later
+        t = tiledlayout(1,2,'TileSpacing','Compact','Padding','Compact');
+        nexttile %%%%% alpha plot
+        plot(r.', alpha_error_medcoarse, '-r');
+        hold on
+        plot(r.', alpha_error_finemed, 'b--');
+        plot(r.', alpha_error_finestfine, 'g-.');
+        hold off
+        ylabel('$\Delta \alpha$','Interpreter','latex','FontSize', 14)
+        xlim([0,4])
+        l=legend('$(\alpha_{M/25}-\alpha_{M/50})$', '$16(\alpha_{M/50}-\alpha_{M/100})$', '$256(\alpha_{M/100}-\alpha_{M/200})$');
+        set(l, 'Interpreter', 'latex','FontSize', 14)
+        set(l, 'FontSize', 14);
+        nexttile %%%%% chi plot
+        plot(r.', chi_error_medcoarse, '-r');
+        hold on
+        plot(r.', chi_error_finemed, 'b--');
+        plot(r.', chi_error_finestfine, 'g-.');
+        hold off
+        ylabel('$\Delta \chi$','Interpreter','latex','FontSize', 14)
+        l=legend('$(\chi_{M/25}-\chi_{M/50})$', '$16(\chi_{M/50}-\chi_{M/100})$', '$256(\chi_{M/100}-\chi_{M/200})$');
+        xlim([0,4])
+        set(l, 'FontSize', 14);
+        set(l, 'Interpreter', 'latex');
+
+        %title(t,'Convergence plots at $t = 0.5$', 'Interpreter', 'latex', 'FontSize', 18)
+        xlabel(t,'$r/M$', 'Interpreter', 'latex','FontSize', 14)
+        title(t, sprintf('$t = %g M$', t_finest(iter)), 'Interpreter', 'latex','FontSize', 14)
+        gif
+    end
+
+    
+    %exportgraphics(t,'alpha_chi_conv_t2.png','BackgroundColor','none','Resolution',300)
 end
 
 function constraint_conv(h,t_end)
