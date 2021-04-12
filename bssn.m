@@ -63,22 +63,24 @@ function bssn
 %     xlabel('r')
 %     ylabel('charac2')
 % 
-% Horizon computation
 
 [horsize_r,horsize_t] = size(var_t(U));
 hor=zeros(horsize_t,1);
 time=zeros(horsize_t,1);
 Theta=zeros(horsize_r,horsize_t);
-bhMass=zeros(horsize_t);
-        % Horizon
+theta_0=zeros(horsize_r,horsize_t);
+u1=zeros(horsize_r,horsize_t);
+u2=zeros(horsize_r,horsize_t);
     for iter=1:horsize_t
         time(iter) = t_end/horsize_t*iter;
-        [j,hor(iter),Theta(:,iter)] = Hor(g_rr(:,iter),g_thth(:,iter),K(:,iter),A_rr(:,iter),chi(:,iter),N,r,h);
-        bhMass(iter)=sqrt(g_thth(j+1,iter))./2;
+        % Horizon and Expansion
+        [hor(iter),Theta(:,iter)] = Hor(g_rr(:,iter),g_thth(:,iter),K(:,iter),A_rr(:,iter),chi(:,iter),N,r,h);
+        % Lightcones
+        [u1(:,iter),u2(:,iter),theta_0(:,iter)]=lightcones(alpha(:,iter),beta_r(:,iter),chi(:,iter),g_rr(:,iter));
     end
-    
-    %     n_plots=7;
-%     ss=floor(horsize_t/n_plots);
+
+    n_plots=8;
+    ss=floor(horsize_t/n_plots);
 %     str=string(zeros(n_plots,1));
 %     str(1)="$t =$ " + time(ss) + "$M$";
 %     figure(1)
@@ -95,45 +97,52 @@ bhMass=zeros(horsize_t);
 %         legend(str,'Interpreter','latex')
 %         hold off
 %         pause(0.001)
+ 
 %     figure(2)
-%         plot(r,theta_0(:,ss))
+%         plot(r,u1(:,ss)-u2(:,ss))
 %         hold on
 %         for i_plots=2:n_plots
-%             plot(r,theta_0(:,i_plots*ss))
+%             plot(r,u1(:,i_plots*ss)-u2(:,i_plots*ss))
 %         end
-%         axis([0. r_max/8.6 0. .6])
+%         axis([0. r_max./8. 0. 1.])
 %         xlabel('$r$','Interpreter','latex')
-%         ylabel('$\theta_0$','Interpreter','latex')
-%         title('Time evolution of lightcone tilting $\theta_0$','Interpreter','latex')
+%         ylabel('$u_r^+-u_r^-$','Interpreter','latex')
+%         title('Lightcone Evolution','Interpreter','latex')
 %         legend(str,'Interpreter','latex')
 %         hold off
 %         pause(0.001)
-%      figure(3)
-%         plot(r,u1(:,ss))
-%         hold on
-%         for i_plots=2:n_plots
-%             plot(r,u1(:,i_plots*ss))
-%         end
-% %         axis([0. r_max/8.6 0. .6])
-%         xlabel('$r$','Interpreter','latex')
-%         ylabel('$u_r^+$','Interpreter','latex')
-%         title('Time evolution of null vectors $u_r^+$','Interpreter','latex')
-%         legend(str,'Interpreter','latex')
-%         hold off
-%         pause(0.001)
-%      figure(4)
-%         plot(r,u2(:,ss))
-%         hold on
-%         for i_plots=2:n_plots
-%             plot(r,u2(:,i_plots*ss))
-%         end
-% %         axis([0. r_max/8.6 0. .6])
-%         xlabel('$r$','Interpreter','latex')
-%         ylabel('$u_r^-$','Interpreter','latex')
-%         title('Time evolution of null vectors $u_r^-$','Interpreter','latex')
-%         legend(str,'Interpreter','latex')
-%         hold off
-%         pause(0.001)
+
+
+sp=10;
+     figure(3)
+        plot(r,u1(:,2*ss),'r-+','MarkerIndices',1:sp:length(r))
+        hold on
+        plot(r,u2(:,2*ss),'r--','MarkerIndices',1:sp:length(r))
+        plot(r,u1(:,4*ss),'b-+','MarkerIndices',1:sp:length(r))
+        plot(r,u2(:,4*ss),'b--','MarkerIndices',1:sp:length(r))
+        plot(r,u1(:,6*ss),'g-+','MarkerIndices',1:sp:length(r))
+        plot(r,u2(:,6*ss),'g--','MarkerIndices',1:sp:length(r))
+        plot(r,u1(:,8*ss),'k-+','MarkerIndices',1:sp:length(r))
+        plot(r,u2(:,8*ss),'k--','MarkerIndices',1:sp:length(r))
+                 
+        axis([0. r_max/10. -.4 0.4])
+        xlabel('$r$','Interpreter','latex')
+        ylabel('$u_r^\pm$','Interpreter','latex')
+        title("Lightcone evolution",'Interpreter','latex')
+        legend("$u^+_r$ at $t = $" + time(2*ss) + "M","$u^-_r$ at $t = $" + time(2*ss) + "M",...
+            "$u^+_r$ at $t = $" + time(4*ss) + "M","$u^-_r$ at $t = $" + time(4*ss) + "M",...
+            "$u^+_r$ at $t = $" + time(6*ss) + "M","$u^-_r$ at $t = $" + time(6*ss) + "M",...
+            "$u^+_r$ at $t = $" + time(8*ss) + "M","$u^-_r$ at $t = $" + time(8*ss) + "M",'Interpreter','latex')
+        hold off
+    pause(0.001)
+
+    figure(4)
+      plot(r,u1(:,ss),'b')
+      hold on
+      plot(r,u2(:,ss),'b')
+      axis([0. r_max -1. 1.])
+      hold off
+      pause(0.001)
     
 
     figure(2)
@@ -496,13 +505,13 @@ function [H, M_r, G_r] = constraints(alpha, beta_r, B_r, chi, g_rr,g_thth, A_rr,
         Gamma_r_p = f_prime(Gamma_r,h,-2/(r_min-2*h),-2/(r_min-h),-2/(r_max+h),-2/(r_max+2*h) ,N);
     end
     
-    % Building constraints
+  % Building constraints
     H = -3/2*A_rr.*A_rr./g_rr./g_rr + 2/3.*K.*K - 5/2.*chi_p.*chi_p./chi./g_rr...
-            +2*chi_pp./g_rr + 2*chi./g_thth-2*chi.*g_thth_pp./g_rr./g_thth...
-            +2*chi_p.*g_thth_p./g_rr./g_thth+chi.*g_rr_p.*g_thth_p./g_rr./g_rr./g_thth...
+            +2.*chi_pp./g_rr + 2.*chi./g_thth-2.*chi.*g_thth_pp./g_rr./g_thth...
+            +2.*chi_p.*g_thth_p./g_rr./g_thth+chi.*g_rr_p.*g_thth_p./g_rr./g_rr./g_thth...
             -chi_p.*g_rr_p./g_rr./g_rr+chi.*g_thth_p.*g_thth_p./2./g_rr./g_thth./g_thth;
-    M_r = A_rr_p./g_rr - 2/3.*K_p...
-        - 3/2.*A_rr./g_rr.*(chi_p./chi - g_thth_p./g_thth+ g_rr_p./g_rr);
+    M_r = A_rr_p./g_rr - 2./3.*K_p...
+        - 3./2.*A_rr./g_rr.*(chi_p./chi - g_thth_p./g_thth+ 2./3.*g_rr_p./g_rr);
     G_r = -g_rr_p./2./g_rr./g_rr+Gamma_r+g_thth_p./g_thth./g_rr;
 end
 
