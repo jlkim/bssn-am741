@@ -888,8 +888,7 @@ end
 function [ur_1,ur_2,theta_0] = lightcones(alpha,beta_r,chi,g_rr)
 ur_1 = -beta_r+sqrt(alpha.*alpha.*chi./g_rr);
 ur_2 = -beta_r-sqrt(alpha.*alpha.*chi./g_rr);
-u1 = 1./(1.+ur_1.*ur_1);
-u2 = 1./(1.+ur_2.*ur_2);
-theta_0 = 0.5.*(acos(u1)+acos(u2));
+
+theta_0=-2./pi.*(atan(ur_1./ur_2)+pi./4);
 
 end
